@@ -101,6 +101,37 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
     }
   }, []);
 
+  /** 列表里的 password 为脱敏，复制时单独请求明文 */
+  const handleCopyPassword = useCallback(
+    async (accountId: number) => {
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/showcase/account-password?region=${encodeURIComponent(region)}&id=${encodeURIComponent(String(accountId))}`,
+          { cache: "no-store" }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          password?: string;
+          message?: string;
+        };
+        if (!res.ok || !json.ok || json.password == null || json.password === "") {
+          setError(json.message ?? "获取密码失败");
+          return;
+        }
+        const ok = await copyText(json.password);
+        if (ok) {
+          const key = `p-${accountId}`;
+          setCopied(key);
+          window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+        }
+      } catch {
+        setError("网络错误");
+      }
+    },
+    [region]
+  );
+
   const regionSwitcher = (
     <div className="mx-auto flex w-full max-w-2xl flex-wrap justify-center gap-2 rounded-2xl border border-slate-200/90 bg-white/90 p-2 shadow-sm ring-1 ring-slate-200/60 backdrop-blur-sm sm:gap-2 sm:p-2">
       {REGIONS.map((r) => (
@@ -243,7 +274,7 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleCopy(`p-${a.id}`, a.password)}
+                        onClick={() => void handleCopyPassword(a.id)}
                         className="min-h-10 flex-1 touch-manipulation rounded-[10px] bg-[#34c759] px-3 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.14)] transition hover:bg-[#30b350] active:bg-[#28a745]"
                       >
                         复制密码
