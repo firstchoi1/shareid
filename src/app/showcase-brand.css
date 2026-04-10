@@ -1,0 +1,34 @@
+/* 展示页：全宽浅色背景 */
+
+.showcase-page-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #eef1f8;
+  background-image:
+    radial-gradient(ellipse 100% 55% at 50% -15%, rgba(99, 102, 241, 0.12), transparent 50%),
+    radial-gradient(ellipse 48% 65% at 0% 42%, rgba(129, 140, 248, 0.1), transparent 50%),
+    radial-gradient(ellipse 48% 65% at 100% 55%, rgba(167, 139, 250, 0.09), transparent 50%),
+    linear-gradient(180deg, #f4f7fd 0%, #eef1f8 40%, #e8ecf6 100%);
+}
+
+.showcase-page-shell::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 40%, black 20%, transparent 75%);
+}
+
+.showcase-page-shell > * {
+  position: relative;
+  z-index: 1;
+}
