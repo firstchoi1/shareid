@@ -5,7 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const STORAGE_KEY = "shareid_tutorial_video_seen";
 const COUNTDOWN_SEC = 5;
 
-const VIDEO_SRC = "/tutorial.mp4";
+/** 构建时注入；可设为 CDN 全路径以加速国内/海外访问 */
+const VIDEO_SRC =
+  typeof process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_URL === "string" &&
+  process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_URL.trim() !== ""
+    ? process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_URL.trim()
+    : "/tutorial.mp4";
 
 export function TutorialVideoModal() {
   const [open, setOpen] = useState(false);
