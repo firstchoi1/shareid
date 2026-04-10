@@ -5,15 +5,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const STORAGE_KEY = "shareid_tutorial_video_seen";
 const COUNTDOWN_SEC = 5;
 
+const VIDEO_SRC = "/tutorial.mp4";
+
 export function TutorialVideoModal() {
   const [open, setOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SEC);
   const [canClose, setCanClose] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     try {
       if (!localStorage.getItem(STORAGE_KEY)) {
+        // 尽早发起视频下载，避免等弹窗渲染后才开始拉取
+        const existing = document.querySelector(`link[data-shareid-preload-tutorial="1"]`);
+        if (!existing) {
+          const link = document.createElement("link");
+          link.rel = "preload";
+          link.href = VIDEO_SRC;
+          link.as = "video";
+          link.type = "video/mp4";
+          link.setAttribute("data-shareid-preload-tutorial", "1");
+          document.head.appendChild(link);
+        }
         // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage 仅客户端可读，需在挂载后与 SSR 首屏对齐后再打开
         setOpen(true);
       }
@@ -44,6 +58,13 @@ export function TutorialVideoModal() {
   useEffect(() => {
     if (!open && videoRef.current) {
       videoRef.current.pause();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 与弹窗打开同步重置，避免显示旧状态
+      setVideoReady(false);
     }
   }, [open]);
 
@@ -82,15 +103,25 @@ export function TutorialVideoModal() {
             不能登录设备，使用之前必看视频，登录教程，避免登录错误
           </p>
         </div>
-        <div className="relative bg-black">
+        <div className="relative min-h-[120px] bg-black">
+          {!videoReady ? (
+            <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-2 bg-black/80 px-4 py-8 text-center">
+              <div className="size-8 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />
+              <p className="text-xs text-zinc-400">视频加载中…</p>
+            </div>
+          ) : null}
           <video
             ref={videoRef}
             className="max-h-[min(70vh,720px)] w-full object-contain"
-            src="/tutorial.mp4"
-            controls
+            src={VIDEO_SRC}
+            preload="auto"
             playsInline
             autoPlay
             muted
+            controls
+            onCanPlay={() => setVideoReady(true)}
+            onLoadedData={() => setVideoReady(true)}
+            onError={() => setVideoReady(true)}
           >
             您的浏览器不支持视频播放。
           </video>
