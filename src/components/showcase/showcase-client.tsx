@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { copyText } from "@/lib/copy-text";
+import { copyFromInputElement, copyText, copyTextSync } from "@/lib/copy-text";
 import { cn } from "@/lib/utils";
 
 type RegionKey = "us" | "hk" | "jp" | "tw" | "cn";
@@ -51,6 +51,11 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
   const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [passwordSheet, setPasswordSheet] = useState<{ id: number; password: string } | null>(
+    null
+  );
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (r: RegionKey) => {
     setError(null);
@@ -90,46 +95,67 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
     return () => window.clearInterval(t);
   }, [region, load]);
 
-  const title = useMemo(() => REGIONS.find((x) => x.key === region)?.label ?? "", [region]);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const handleCopy = useCallback(async (key: string, value: string) => {
-    const ok = await copyText(value);
-    if (ok) {
-      setCopied(key);
-      window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+  useEffect(() => {
+    if (!passwordSheet) {
+      return;
     }
+    const id = window.requestAnimationFrame(() => {
+      const el = passwordInputRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+        el.setSelectionRange(0, el.value.length);
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [passwordSheet]);
+
+  const title = useMemo(() => REGIONS.find((x) => x.key === region)?.label ?? "", [region]);
+
+  const flashCopied = useCallback((key: string) => {
+    setCopied(key);
+    window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
   }, []);
 
-  /** 列表里的 password 为脱敏，复制时单独请求明文 */
-  const handleCopyPassword = useCallback(
-    async (accountId: number) => {
+  /** 账号：同步 execCommand 优先（适配 iOS Safari 手势要求） */
+  const copyAccountUsername = useCallback(
+    (accountId: number, username: string) => {
+      const key = `u-${accountId}`;
+      if (copyTextSync(username)) {
+        flashCopied(key);
+        return;
+      }
+      void copyText(username).then((ok) => {
+        if (ok) {
+          flashCopied(key);
+        }
+      });
+    },
+    [flashCopied]
+  );
+
+  /** 密码已在加载/刷新列表时拉取，点击时直接复制内存中的值 */
+  const copyAccountPassword = useCallback(
+    (accountId: number, password: string) => {
+      const key = `p-${accountId}`;
+      if (!password || password === "—") {
+        setError("暂无密码，请等待列表加载完成");
+        return;
+      }
       setError(null);
-      try {
-        const res = await fetch(
-          `/api/showcase/account-password?region=${encodeURIComponent(region)}&id=${encodeURIComponent(String(accountId))}`,
-          { cache: "no-store" }
-        );
-        const json = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          password?: string;
-          message?: string;
-        };
-        if (!res.ok || !json.ok || json.password == null || json.password === "") {
-          setError(json.message ?? "获取密码失败");
+      if (copyTextSync(password)) {
+        flashCopied(key);
+        return;
+      }
+      void copyText(password).then((ok) => {
+        if (ok) {
+          flashCopied(key);
           return;
         }
-        const ok = await copyText(json.password);
-        if (ok) {
-          const key = `p-${accountId}`;
-          setCopied(key);
-          window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
-        }
-      } catch {
-        setError("网络错误");
-      }
+        setPasswordSheet({ id: accountId, password });
+      });
     },
-    [region]
+    [flashCopied]
   );
 
   const regionSwitcher = (
@@ -267,14 +293,14 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
                     <div className="flex gap-2 border-t border-slate-200/90 bg-white/90 px-3 py-3 sm:px-3.5">
                       <button
                         type="button"
-                        onClick={() => void handleCopy(`u-${a.id}`, a.username)}
+                        onClick={() => copyAccountUsername(a.id, a.username)}
                         className="min-h-10 flex-1 touch-manipulation rounded-[10px] bg-[#0071e3] px-3 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] transition hover:bg-[#0077ed] active:bg-[#0062c4]"
                       >
                         复制账号
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleCopyPassword(a.id)}
+                        onClick={() => copyAccountPassword(a.id, a.password)}
                         className="min-h-10 flex-1 touch-manipulation rounded-[10px] bg-[#34c759] px-3 text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.14)] transition hover:bg-[#30b350] active:bg-[#28a745]"
                       >
                         复制密码
@@ -293,6 +319,80 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
         </section>
         </div>
       </div>
+
+      {passwordSheet ? (
+        <div
+          className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-sheet-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            aria-label="关闭"
+            onClick={() => setPasswordSheet(null)}
+          />
+          <div className="relative z-10 m-0 w-full max-w-md rounded-t-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:m-4 sm:rounded-2xl">
+            <p id="password-sheet-title" className="text-sm font-semibold text-slate-900">
+              复制密码
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              若本机限制剪贴板，请在下方再点一次「复制密码」，或全选文本手动复制。
+            </p>
+            <input
+              key={passwordSheet.id}
+              ref={passwordInputRef}
+              readOnly
+              value={passwordSheet.password}
+              className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 font-mono text-base text-slate-900 outline-none"
+              style={{ fontSize: "16px" }}
+              onFocus={(e) => e.target.select()}
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (copyFromInputElement(passwordInputRef.current)) {
+                    flashCopied(`p-${passwordSheet.id}`);
+                    setPasswordSheet(null);
+                  }
+                }}
+                className="min-h-10 flex-1 rounded-[10px] bg-[#34c759] px-4 text-sm font-medium text-white shadow-sm"
+              >
+                复制密码
+              </button>
+              <button
+                type="button"
+                onClick={() => setPasswordSheet(null)}
+                className="min-h-10 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
+              >
+                关闭
+              </button>
+            </div>
+            {typeof navigator !== "undefined" &&
+            typeof navigator.share === "function" ? (
+              <button
+                type="button"
+                className="mt-2 w-full rounded-lg border border-slate-200 py-2 text-sm text-slate-700"
+                onClick={() => {
+                  void navigator
+                    .share({ text: passwordSheet.password })
+                    .then(() => {
+                      flashCopied(`p-${passwordSheet.id}`);
+                      setPasswordSheet(null);
+                    })
+                    .catch(() => {
+                      /* 用户取消分享 */
+                    });
+                }}
+              >
+                用系统分享发送密码
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

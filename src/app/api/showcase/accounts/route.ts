@@ -16,17 +16,12 @@ function tagForRegion(region: string): number | null {
   return n;
 }
 
-function maskPassword(pw: string): string {
-  if (!pw) return "—";
-  if (pw.length <= 2) return "**";
-  return `${pw[0]}${"*".repeat(Math.min(8, pw.length - 2))}${pw[pw.length - 1]!}`;
-}
-
-function toPublicAccount(acc: AppleAccount, reveal: boolean) {
+/** 页面加载时即返回明文密码，供前端复制（与定时刷新同源）；勿在 UI 中展示密码字段 */
+function toPublicAccount(acc: AppleAccount) {
   return {
     id: acc.id,
     username: acc.username,
-    password: reveal ? acc.password : maskPassword(acc.password),
+    password: acc.password,
     region_display: acc.region_display ?? null,
     last_check: acc.last_check ?? null,
     last_check_success: acc.last_check_success ?? null,
@@ -50,13 +45,11 @@ export async function GET(request: Request) {
     });
   }
 
-  const reveal = process.env.SHOWCASE_REVEAL_PASSWORDS === "true";
-
   try {
     const list = await listAppleAccountsForShowcase(tag);
     return NextResponse.json({
       ok: true,
-      data: list.map((a) => toPublicAccount(a, reveal)),
+      data: list.map((a) => toPublicAccount(a)),
     });
   } catch (e) {
     const raw = e instanceof Error ? e.message : "托管站请求失败";
