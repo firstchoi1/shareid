@@ -71,26 +71,16 @@ export function TutorialVideoModal() {
       aria-labelledby="tutorial-video-title"
     >
       <div className="relative flex w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+        <div className="border-b border-white/10 px-4 py-3 sm:px-5">
           <h2 id="tutorial-video-title" className="text-base font-semibold text-white sm:text-lg">
             登录教程
           </h2>
-          <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
-            <span
-              className="text-sm tabular-nums text-zinc-300"
-              aria-live="polite"
-            >
-              {canClose ? "可以关闭" : `请观看 ${secondsLeft} 秒后可关闭`}
-            </span>
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={!canClose}
-              className="shrink-0 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              关闭
-            </button>
-          </div>
+        </div>
+        <div className="border-b border-amber-500/25 bg-amber-950/40 px-4 py-3 sm:px-5">
+          <p className="text-sm font-semibold text-amber-100 sm:text-base">获取共享ID登录教程提示：</p>
+          <p className="mt-2 text-sm leading-relaxed text-amber-50/95 sm:text-[15px]">
+            不能登录设备，使用之前必看视频，登录教程，避免登录错误
+          </p>
         </div>
         <div className="relative bg-black">
           <video
@@ -104,6 +94,19 @@ export function TutorialVideoModal() {
           >
             您的浏览器不支持视频播放。
           </video>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-4 py-3 sm:px-5">
+          <span className="text-sm tabular-nums text-zinc-300" aria-live="polite">
+            {canClose ? "可以关闭" : `请观看 ${secondsLeft} 秒后可关闭`}
+          </span>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={!canClose}
+            className="shrink-0 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            关闭
+          </button>
         </div>
       </div>
     </div>

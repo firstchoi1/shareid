@@ -188,9 +188,8 @@ export function FaqAccordionItems() {
           <div className="rounded-lg border border-slate-200/90 bg-slate-50/90 p-4 dark:border-slate-700 dark:bg-slate-900/40">
             <p className="mb-1.5 text-sm font-semibold text-foreground">💡 解决方案</p>
             <ul className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-              <li>• 卸载应用后重新安装</li>
-              <li>• 或使用原下载账号进行更新</li>
-              <li>• 建议：重新安装是最简单的方法</li>
+              <li>• 使用原下载账号进行更新</li>
+              <li>• 重新安装或者购买永久独享的ID是最简单的办法</li>
             </ul>
           </div>
         </div>
