@@ -6,10 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { copyFromInputElement, copyText, copyTextSync } from "@/lib/copy-text";
 import { cn } from "@/lib/utils";
 
-type RegionKey = "us" | "hk" | "jp" | "tw" | "cn";
+type RegionKey = "us" | "us_rocket" | "hk" | "jp" | "tw" | "cn";
 
 const REGIONS: { key: RegionKey; label: string }[] = [
   { key: "us", label: "美区 ID" },
+  { key: "us_rocket", label: "美区小火箭" },
   { key: "hk", label: "香港 ID" },
   { key: "jp", label: "日本 ID" },
   { key: "tw", label: "台湾 ID" },
@@ -166,7 +167,7 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
           type="button"
           onClick={() => setRegion(r.key)}
           className={cn(
-            "min-h-10 min-w-[4.25rem] touch-manipulation rounded-xl px-3 py-2.5 text-xs font-medium transition sm:min-h-9 sm:min-w-0 sm:flex-1 sm:px-4 sm:py-2 sm:text-sm",
+            "min-h-10 min-w-[5.75rem] touch-manipulation whitespace-nowrap rounded-xl px-3 py-2.5 text-xs font-medium transition sm:min-h-9 sm:min-w-[5.75rem] sm:flex-1 sm:px-4 sm:py-2 sm:text-sm",
             region === r.key
               ? "bg-gradient-to-r from-indigo-500 to-violet-600 font-semibold text-white shadow-md shadow-indigo-500/25 ring-1 ring-indigo-400/30"
               : "border border-transparent bg-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100"

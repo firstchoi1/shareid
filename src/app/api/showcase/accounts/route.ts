@@ -4,7 +4,7 @@ import { listAppleAccountsForShowcase, type AppleAccount } from "@/lib/apple-aut
 
 export const dynamic = "force-dynamic";
 
-const REGION_KEYS = ["us", "hk", "jp", "tw", "cn"] as const;
+const REGION_KEYS = ["us", "us_rocket", "hk", "jp", "tw", "cn"] as const;
 type RegionKey = (typeof REGION_KEYS)[number];
 
 function tagForRegion(region: string): number | null {
