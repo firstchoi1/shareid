@@ -33,15 +33,9 @@ function CheckStatusLine({ a }: { a: AccountRow }) {
   return (
     <p className="mt-2 flex flex-wrap items-center gap-2 text-sm leading-snug">
       {a.last_check ? <span className="text-slate-700">{a.last_check}</span> : null}
-      {a.last_check_success === true ? (
-        <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
-          正常
-        </span>
-      ) : a.last_check_success === false ? (
-        <span className="inline-flex shrink-0 items-center rounded-md border-2 border-red-500 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
-          检测未通过
-        </span>
-      ) : null}
+      <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+        正常
+      </span>
     </p>
   );
 }

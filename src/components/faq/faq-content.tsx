@@ -108,11 +108,14 @@ export function FaqAccordionItems() {
       <FaqBlock
         index={1}
         icon={Sparkles}
-        title="永久独享ID账号的好处？"
-        subtitle="临时 ID 与永久独享的区别与建议"
+        title="更多常见问题"
+        subtitle="展开查看永久独享、验证码、设置登录与更新问题"
       >
         <div className="space-y-3">
           <div className="rounded-lg border border-indigo-100/90 bg-indigo-50/90 p-4 dark:border-indigo-800/40 dark:bg-indigo-900/30">
+            <p className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-indigo-50">
+              永久独享ID账号的好处？
+            </p>
             <p className="text-sm font-medium leading-relaxed text-slate-800 dark:text-indigo-50">
               临时ID只能下载，不能更新，每次下载需要卸载重装，永久独享苹果ID后续可以正常更新使用！！！
             </p>
@@ -122,17 +125,13 @@ export function FaqAccordionItems() {
               建议：重新安装或者购买永久独享的ID是最简单的办法
             </p>
           </div>
-        </div>
-      </FaqBlock>
 
-      <FaqBlock
-        index={2}
-        icon={Shield}
-        title="登录时提示需要输入验证码"
-        subtitle="双重认证问题的原因分析和解决方案"
-      >
-        <div className="space-y-3">
+          <div className="h-px bg-slate-200/90 dark:bg-slate-700/70" />
+
           <div className="rounded-lg border border-violet-100/90 bg-violet-50/90 p-4 dark:border-violet-800/40 dark:bg-violet-900/25">
+            <p className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-violet-100">
+              登录时提示需要输入验证码
+            </p>
             <p className="mb-1.5 text-sm font-semibold text-violet-800 dark:text-violet-100">📱 问题原因</p>
             <p className="text-sm leading-relaxed text-violet-900/90 dark:text-violet-50/90">
               其他用户登录时绑定了手机号，导致需要验证码验证，我们无法获取这些验证码
@@ -144,42 +143,36 @@ export function FaqAccordionItems() {
               请重新获取其他账号进行登录，或等待 10 分钟后尝试，系统会自动解绑
             </p>
           </div>
-        </div>
-      </FaqBlock>
 
-      <FaqBlock
-        index={3}
-        icon={Ban}
-        title="共享账号可以在设置中登录吗？"
-        subtitle="关于设置登录的重要安全警告"
-      >
-        <div className="rounded-lg border border-red-200/90 bg-red-50/90 p-5 dark:border-red-900/45 dark:bg-red-950/25">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="size-7 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
-            <div className="min-w-0">
-              <p className="mb-1.5 text-base font-bold text-red-900 dark:text-red-200">❌ 绝对不可以！</p>
-              <p className="mb-3 text-sm leading-relaxed text-red-800 dark:text-red-200/90">
-                切记：共享账号绝对不能在 iPhone 设置中登录！哪怕万分之一的概率出问题，也可能导致严重后果。
-              </p>
-              <div className="rounded-md border border-red-200/80 bg-card p-3 dark:border-red-900/50">
-                <p className="text-xs font-medium leading-relaxed text-red-700 dark:text-red-300">
-                  ⚠️
-                  风险提示：一旦在设置中登录，可能导致数据丢失、设备锁定等不可挽回的损失，我们也无法提供技术支持。
+          <div className="h-px bg-slate-200/90 dark:bg-slate-700/70" />
+
+          <div className="rounded-lg border border-red-200/90 bg-red-50/90 p-5 dark:border-red-900/45 dark:bg-red-950/25">
+            <p className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-red-200">
+              共享账号可以在设置中登录吗？
+            </p>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="size-7 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
+              <div className="min-w-0">
+                <p className="mb-1.5 text-base font-bold text-red-900 dark:text-red-200">❌ 绝对不可以！</p>
+                <p className="mb-3 text-sm leading-relaxed text-red-800 dark:text-red-200/90">
+                  切记：共享账号绝对不能在 iPhone 设置中登录！哪怕万分之一的概率出问题，也可能导致严重后果。
                 </p>
+                <div className="rounded-md border border-red-200/80 bg-card p-3 dark:border-red-900/50">
+                  <p className="text-xs font-medium leading-relaxed text-red-700 dark:text-red-300">
+                    ⚠️
+                    风险提示：一旦在设置中登录，可能导致数据丢失、设备锁定等不可挽回的损失，我们也无法提供技术支持。
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </FaqBlock>
 
-      <FaqBlock
-        index={4}
-        icon={RefreshCw}
-        title="更新 App 时提示禁用/锁定错误"
-        subtitle="应用更新失败的原因分析和处理方法"
-      >
-        <div className="space-y-3">
+          <div className="h-px bg-slate-200/90 dark:bg-slate-700/70" />
+
           <div className="rounded-lg border border-indigo-100/80 bg-indigo-50/80 p-4 dark:border-indigo-800/40 dark:bg-indigo-900/30">
+            <p className="mb-1.5 text-sm font-semibold text-slate-900 dark:text-indigo-100">
+              更新 App 时提示禁用/锁定错误
+            </p>
             <p className="mb-1.5 text-sm font-semibold text-indigo-800 dark:text-indigo-100">📱 问题原因</p>
             <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
               苹果 App 更新机制：用哪个账号下载的 App，就必须用哪个账号才能更新
