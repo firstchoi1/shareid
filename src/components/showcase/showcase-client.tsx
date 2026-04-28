@@ -188,7 +188,7 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
         ))}
       </div>
       <a
-        href="https://xpp.iosid.icu/"
+        href="https://idd.taotaoid.com/"
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
