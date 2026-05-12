@@ -1,5 +1,6 @@
 import { FaqAccordionItems } from "@/components/faq/faq-content";
 import { ShowcaseHome } from "@/components/showcase/showcase-client";
+import { TutorialVideoEmbed } from "@/components/tutorial-video-embed";
 import { TutorialVideoModal } from "@/components/tutorial-video-modal";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +23,10 @@ export default function HomePage() {
           )}
         >
           <div className="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-4 py-4 text-center text-white shadow-sm sm:px-6 sm:py-4">
-            <h2 className="text-lg font-bold tracking-tight sm:text-xl md:text-2xl">常见问题解答</h2>
+            <h2 className="text-lg font-bold tracking-tight sm:text-xl md:text-2xl">登录教程视频</h2>
           </div>
+
+          <TutorialVideoEmbed />
 
           <div className="grid grid-cols-1 items-start gap-3 p-3 sm:gap-4 sm:p-4 lg:p-5">
             <FaqAccordionItems />
