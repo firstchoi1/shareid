@@ -188,7 +188,7 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
         ))}
       </div>
       <a
-        href="https://idd.taotaoid.com/"
+        href="https://id188.vip"
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
