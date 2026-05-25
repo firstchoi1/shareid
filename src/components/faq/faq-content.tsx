@@ -3,10 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
-  Ban,
   ChevronDown,
-  RefreshCw,
-  Shield,
   Smartphone,
   Sparkles,
 } from "lucide-react";

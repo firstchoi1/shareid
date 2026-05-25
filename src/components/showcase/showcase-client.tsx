@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -50,6 +51,8 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
   const [passwordSheet, setPasswordSheet] = useState<{ id: number; password: string } | null>(
     null
   );
+  const [passwordQuiz, setPasswordQuiz] = useState<{ id: number; password: string } | null>(null);
+  const [passwordWarningOpen, setPasswordWarningOpen] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (r: RegionKey) => {
@@ -112,6 +115,24 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
     window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
   }, []);
 
+  const performPasswordCopy = useCallback(
+    (accountId: number, password: string) => {
+      const key = `p-${accountId}`;
+      if (copyTextSync(password)) {
+        flashCopied(key);
+        return;
+      }
+      void copyText(password).then((ok) => {
+        if (ok) {
+          flashCopied(key);
+          return;
+        }
+        setPasswordSheet({ id: accountId, password });
+      });
+    },
+    [flashCopied]
+  );
+
   /** 账号：同步 execCommand 优先（适配 iOS Safari 手势要求） */
   const copyAccountUsername = useCallback(
     (accountId: number, username: string) => {
@@ -132,25 +153,15 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
   /** 密码已在加载/刷新列表时拉取，点击时直接复制内存中的值 */
   const copyAccountPassword = useCallback(
     (accountId: number, password: string) => {
-      const key = `p-${accountId}`;
       if (!password || password === "—") {
         setError("暂无密码，请等待列表加载完成");
         return;
       }
       setError(null);
-      if (copyTextSync(password)) {
-        flashCopied(key);
-        return;
-      }
-      void copyText(password).then((ok) => {
-        if (ok) {
-          flashCopied(key);
-          return;
-        }
-        setPasswordSheet({ id: accountId, password });
-      });
+      setPasswordWarningOpen(false);
+      setPasswordQuiz({ id: accountId, password });
     },
-    [flashCopied]
+    []
   );
 
   const regionSwitcher = (
@@ -277,7 +288,9 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
                         <User className="size-5" aria-hidden />
                       </div>
                       <div className="min-w-0 flex-1 pt-0.5">
-                        <p className="text-xs font-medium text-slate-500">账号</p>
+                        <p className="text-xs font-medium text-slate-500">
+                          账号（下载完APP，请立即退出，避免锁机）
+                        </p>
                         <p className="mt-0.5 font-mono text-sm leading-snug text-slate-900 break-all">{a.username}</p>
                         <p className="mt-1.5 text-sm leading-snug text-slate-700">
                           账号信息：选择其他 不升级
@@ -385,6 +398,92 @@ export function ShowcaseHome({ children }: { children?: React.ReactNode }) {
                 用系统分享发送密码
               </button>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {passwordQuiz ? (
+        <div
+          className="fixed inset-0 z-[190] flex items-center justify-center bg-black/60 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-quiz-title"
+        >
+          <div className="w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.35)]">
+            <div className="px-6 py-7 sm:px-8">
+              <h3
+                id="password-quiz-title"
+                className="text-center text-3xl font-extrabold text-red-600"
+              >
+                安全提问
+              </h3>
+              <p className="mt-4 text-center text-base font-semibold leading-8 text-slate-700">
+                共享ID下载 APP 时，只能在哪里登录？
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordQuiz(null);
+                    setPasswordWarningOpen(true);
+                  }}
+                  className="flex items-center justify-center px-4 py-5 transition hover:scale-[0.98]"
+                >
+                  <Image
+                    src="/apple-settings.svg"
+                    alt="在设置里登录"
+                    width={132}
+                    height={132}
+                    className="h-28 w-28 object-contain sm:h-32 sm:w-32"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = passwordQuiz;
+                    setPasswordQuiz(null);
+                    performPasswordCopy(current.id, current.password);
+                  }}
+                  className="flex items-center justify-center px-4 py-5 transition hover:scale-[0.98]"
+                >
+                  <Image
+                    src="/apple-store.svg"
+                    alt="只在 App Store 登录"
+                    width={132}
+                    height={132}
+                    className="h-28 w-28 object-contain sm:h-32 sm:w-32"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {passwordWarningOpen ? (
+        <div
+          className="fixed inset-0 z-[195] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-warning-title"
+        >
+          <div className="w-full max-w-md rounded-[26px] bg-white px-6 py-7 shadow-[0_25px_80px_rgba(15,23,42,0.35)]">
+            <h3
+              id="password-warning-title"
+              className="text-center text-3xl font-extrabold tracking-wide text-red-600"
+            >
+              ⚠️ 警告
+            </h3>
+            <p className="mt-6 text-center text-xl leading-9 text-slate-700 sm:text-[1.75rem]">
+              回答错误！！！共享账号禁止登陆设置
+            </p>
+            <button
+              type="button"
+              onClick={() => setPasswordWarningOpen(false)}
+              className="mt-8 w-full rounded-xl bg-[#2f92f8] px-4 py-4 text-2xl font-bold text-white shadow-[0_10px_24px_rgba(47,146,248,0.3)] transition hover:bg-[#1f86ef]"
+            >
+              确定
+            </button>
           </div>
         </div>
       ) : null}
