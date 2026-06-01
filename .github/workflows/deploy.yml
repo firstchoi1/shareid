@@ -39,7 +39,7 @@ jobs:
 
             echo "Deploying ${APP_NAME} from ${APP_DIR} on port ${APP_PORT}"
 
-            ssh -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" \
+            ssh -n -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" \
               "if [ -d '${APP_DIR}/.git' ]; then \
                  cd '${APP_DIR}' && \
                  git pull --ff-only origin main && \
