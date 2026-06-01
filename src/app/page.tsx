@@ -6,6 +6,8 @@ import { TutorialWarningBanner } from "@/components/tutorial-warning-banner";
 import { getSiteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const config = await getSiteConfig();
 
