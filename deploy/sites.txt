@@ -1,3 +1,4 @@
 # app_name|app_dir|app_port
 shareid|/var/www/shareid|3003
 ydzid|/var/www/ydzid|3004
+qsid|/var/www/qsid|3005
