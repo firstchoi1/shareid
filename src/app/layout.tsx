@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PCYID · 苹果账号展示",
+  title: "苹果ID",
   description: "各地区账号信息展示（数据来自托管站，仅供参考）",
 };
 
