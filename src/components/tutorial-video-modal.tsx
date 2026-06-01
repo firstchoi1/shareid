@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const COUNTDOWN_SEC = 20;
 
-export function TutorialVideoModal() {
+export function TutorialVideoModal({ purchaseUrl }: { purchaseUrl: string }) {
   const [open, setOpen] = useState(true);
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SEC);
   const [canClose, setCanClose] = useState(false);
@@ -63,7 +63,7 @@ export function TutorialVideoModal() {
             <p>
               为保障您的账号与设备安全，建议购买独享ID使用。
               <a
-                href="https://id188.vip/"
+                href={purchaseUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mx-1 inline-flex rounded-xl bg-[#1677ff] px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f67e6]"

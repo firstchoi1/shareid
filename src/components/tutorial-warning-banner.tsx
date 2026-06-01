@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function TutorialWarningBanner() {
+export function TutorialWarningBanner({ purchaseUrl }: { purchaseUrl: string }) {
   const bannerRef = useRef<HTMLDivElement>(null);
   const [bannerHeight, setBannerHeight] = useState(0);
 
@@ -29,7 +29,7 @@ export function TutorialWarningBanner() {
         </p>
       </div>
       <a
-        href="https://id188.vip/"
+        href={purchaseUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-4 inline-flex rounded-full bg-[#0d6efd] px-8 py-3 text-xl font-bold text-white shadow-[0_12px_24px_rgba(13,110,253,0.28)] transition hover:bg-[#0b5ed7]"
