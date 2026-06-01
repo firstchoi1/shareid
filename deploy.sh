@@ -1,18 +1,52 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_DIR="/var/www/shareid"
-APP_NAME="shareid"
-APP_PORT="3003"
 BRANCH="main"
-SKIP_PULL="${1:-}"
+APP_DIR="$(pwd)"
+APP_NAME=""
+APP_PORT=""
+SKIP_PULL="false"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --app-dir)
+      APP_DIR="$2"
+      shift 2
+      ;;
+    --app-name)
+      APP_NAME="$2"
+      shift 2
+      ;;
+    --app-port)
+      APP_PORT="$2"
+      shift 2
+      ;;
+    --branch)
+      BRANCH="$2"
+      shift 2
+      ;;
+    --skip-pull)
+      SKIP_PULL="true"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$APP_NAME" ] || [ -z "$APP_PORT" ]; then
+  echo "Usage: bash ./deploy.sh --app-name <name> --app-port <port> [--app-dir <dir>] [--branch <branch>] [--skip-pull]" >&2
+  exit 1
+fi
 
 cd "$APP_DIR"
 
 echo "===> Record current lockfile hash"
 PREV_LOCK_HASH="$(sha1sum package-lock.json 2>/dev/null | awk '{print $1}' || echo "")"
 
-if [ "$SKIP_PULL" != "--skip-pull" ]; then
+if [ "$SKIP_PULL" != "true" ]; then
   echo "===> Pull latest code"
   git pull --ff-only origin "$BRANCH"
 else

@@ -1,4 +1,4 @@
-name: Deploy ShareID
+name: Deploy Sites
 
 on:
   push:
@@ -30,4 +30,19 @@ jobs:
           SSH_PORT: ${{ secrets.DEPLOY_PORT }}
           SSH_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" "cd /var/www/shareid && git pull --ff-only origin main && bash ./deploy.sh --skip-pull"
+          while IFS='|' read -r APP_NAME APP_DIR APP_PORT; do
+            if [ -z "$APP_NAME" ] || [[ "$APP_NAME" == \#* ]]; then
+              continue
+            fi
+
+            echo "Deploying ${APP_NAME} from ${APP_DIR} on port ${APP_PORT}"
+
+            ssh -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" \
+              "if [ -d '${APP_DIR}/.git' ]; then \
+                 cd '${APP_DIR}' && \
+                 git pull --ff-only origin main && \
+                 bash ./deploy.sh --skip-pull --app-name '${APP_NAME}' --app-port '${APP_PORT}' --app-dir '${APP_DIR}'; \
+               else \
+                 echo 'Skip ${APP_NAME}: ${APP_DIR} does not exist on server yet'; \
+               fi"
+          done < deploy/sites.txt
