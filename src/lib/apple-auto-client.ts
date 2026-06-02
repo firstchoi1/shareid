@@ -1,6 +1,6 @@
 /**
- * AppleAutoPro User API — 展示站专用（X-API-Key）
- * 配置：SHOWCASE_APPLE_AUTO_BASE_URL、SHOWCASE_APPLE_API_KEY（未设时可回退 APPLE_AUTO_*）
+ * AppleAutoPro User API - 展示站专用（X-API-Key）
+ * 可从后台 site-config.json 读取，也可回退到服务器 .env。
  */
 
 export type AppleAccount = {
@@ -18,6 +18,11 @@ type ApiEnvelope<T> = {
   data?: T;
 };
 
+type ShowcaseApiConfig = {
+  appleAutoBaseUrl?: string | null;
+  appleAutoApiKey?: string | null;
+};
+
 function normalizeHttpOrigin(raw: string): string {
   const trimmed = raw.trim().replace(/\/$/, "");
   if (!trimmed) return "";
@@ -25,17 +30,25 @@ function normalizeHttpOrigin(raw: string): string {
   return `https://${trimmed}`;
 }
 
-function requireShowcaseConfig() {
+function requireShowcaseConfig(overrides?: ShowcaseApiConfig) {
   const base = normalizeHttpOrigin(
-    (process.env.SHOWCASE_APPLE_AUTO_BASE_URL ?? process.env.APPLE_AUTO_BASE_URL ?? "").trim()
+    (
+      overrides?.appleAutoBaseUrl ??
+      process.env.SHOWCASE_APPLE_AUTO_BASE_URL ??
+      process.env.APPLE_AUTO_BASE_URL ??
+      ""
+    ).trim()
   );
   const key =
+    overrides?.appleAutoApiKey?.trim() ||
     process.env.SHOWCASE_APPLE_AUTO_API_KEY?.trim() ||
     process.env.APPLE_AUTO_API_KEY?.trim() ||
     "";
+
   if (!base || !key) {
     throw new Error("SHOWCASE_APPLE_AUTO_NOT_CONFIGURED");
   }
+
   return { base, key };
 }
 
@@ -79,8 +92,11 @@ function unwrapAccountList(raw: unknown): AppleAccount[] {
   return [];
 }
 
-export async function listAppleAccountsForShowcase(tag?: number | null): Promise<AppleAccount[]> {
-  const cfg = requireShowcaseConfig();
+export async function listAppleAccountsForShowcase(
+  tag?: number | null,
+  overrides?: ShowcaseApiConfig
+): Promise<AppleAccount[]> {
+  const cfg = requireShowcaseConfig(overrides);
   const path =
     tag != null
       ? `/client/getAccountsByTag?tag=${encodeURIComponent(String(tag))}`

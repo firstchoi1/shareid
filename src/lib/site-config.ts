@@ -9,6 +9,8 @@ export type ShowcaseRegionConfig = {
 
 export type SiteConfig = {
   purchaseUrl: string;
+  appleAutoBaseUrl: string;
+  appleAutoApiKey: string;
   regions: ShowcaseRegionConfig[];
 };
 
@@ -17,6 +19,14 @@ const CONFIG_PATH = path.join(CONFIG_DIR, "site-config.json");
 
 const DEFAULT_CONFIG: SiteConfig = {
   purchaseUrl: "https://id188.vip/",
+  appleAutoBaseUrl:
+    process.env.SHOWCASE_APPLE_AUTO_BASE_URL?.trim() ||
+    process.env.APPLE_AUTO_BASE_URL?.trim() ||
+    "",
+  appleAutoApiKey:
+    process.env.SHOWCASE_APPLE_AUTO_API_KEY?.trim() ||
+    process.env.APPLE_AUTO_API_KEY?.trim() ||
+    "",
   regions: [
     { key: "us", label: "美区 ID", tagId: 1 },
     { key: "us_rocket", label: "美区小火箭", tagId: 6 },
@@ -61,6 +71,16 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
       ? input.purchaseUrl.trim()
       : DEFAULT_CONFIG.purchaseUrl;
 
+  const appleAutoBaseUrl =
+    typeof input?.appleAutoBaseUrl === "string" && input.appleAutoBaseUrl.trim() !== ""
+      ? input.appleAutoBaseUrl.trim()
+      : DEFAULT_CONFIG.appleAutoBaseUrl;
+
+  const appleAutoApiKey =
+    typeof input?.appleAutoApiKey === "string" && input.appleAutoApiKey.trim() !== ""
+      ? input.appleAutoApiKey.trim()
+      : DEFAULT_CONFIG.appleAutoApiKey;
+
   const rawRegions = Array.isArray(input?.regions) ? input.regions : DEFAULT_CONFIG.regions;
   const deduped = new Map<string, ShowcaseRegionConfig>();
 
@@ -75,6 +95,8 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
 
   return {
     purchaseUrl,
+    appleAutoBaseUrl,
+    appleAutoApiKey,
     regions: regions.length > 0 ? regions : DEFAULT_CONFIG.regions,
   };
 }

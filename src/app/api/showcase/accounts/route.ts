@@ -36,7 +36,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const list = await listAppleAccountsForShowcase(tag);
+    const list = await listAppleAccountsForShowcase(tag, {
+      appleAutoBaseUrl: config.appleAutoBaseUrl,
+      appleAutoApiKey: config.appleAutoApiKey,
+    });
     return NextResponse.json({
       ok: true,
       data: list.map((a) => toPublicAccount(a)),
@@ -45,7 +48,7 @@ export async function GET(request: Request) {
     const raw = error instanceof Error ? error.message : "托管站请求失败";
     const message =
       raw === "SHOWCASE_APPLE_AUTO_NOT_CONFIGURED"
-        ? "未配置托管接口（SHOWCASE_APPLE_AUTO_API_KEY，可选 SHOWCASE_APPLE_AUTO_BASE_URL）"
+        ? "未配置托管接口（可在后台或 .env 配置 Base URL / API Key）"
         : raw;
     return NextResponse.json({ ok: false, message }, { status: 502 });
   }

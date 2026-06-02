@@ -20,7 +20,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               ShareID 后台
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              这里改完保存，前台三个“点我购买独享ID”和分类标签都会统一跟着变。
+              这里改完保存，前台购买链接、托管接口配置和分类标签都会统一跟着变化。
             </p>
           </div>
           <button
@@ -47,6 +47,38 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
           className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
           placeholder="https://example.com/"
         />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-5 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur sm:p-6">
+        <h2 className="text-xl font-bold text-slate-900">托管接口配置</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          这里可以直接为当前站点设置 AppleAuto 的 Base URL 和 API Key。不填写时会回退到服务器
+          `.env` 里的配置。
+        </p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Base URL</span>
+            <input
+              value={config.appleAutoBaseUrl}
+              onChange={(event) => {
+                setConfig((prev) => ({ ...prev, appleAutoBaseUrl: event.target.value }));
+              }}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
+              placeholder="https://your-host.example.com"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">API Key</span>
+            <input
+              value={config.appleAutoApiKey}
+              onChange={(event) => {
+                setConfig((prev) => ({ ...prev, appleAutoApiKey: event.target.value }));
+              }}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
+              placeholder="replace-with-api-key"
+            />
+          </label>
+        </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200/90 bg-white/95 p-5 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur sm:p-6">
