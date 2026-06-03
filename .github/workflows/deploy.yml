@@ -38,8 +38,14 @@ jobs:
             'bash -s' <<'REMOTE'
           set -euo pipefail
 
+          REMOTE_SITES_FILE="/etc/shareid/sites.txt"
+
           decode_sites() {
-            printf '%s' "$SITES_CONTENT_B64" | base64 -d
+            if [ -s "$REMOTE_SITES_FILE" ]; then
+              cat "$REMOTE_SITES_FILE"
+            else
+              printf '%s' "$SITES_CONTENT_B64" | base64 -d
+            fi
           }
 
           while IFS='|' read -r APP_NAME APP_DIR APP_PORT || [ -n "${APP_NAME:-}" ]; do
