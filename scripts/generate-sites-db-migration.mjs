@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 function stripBom(text) {
@@ -305,6 +305,7 @@ async function main() {
     sqlChunks.push(renderSiteSql(site, config, redeemStore));
   }
 
+  await mkdir(path.dirname(args.output), { recursive: true });
   await writeFile(args.output, sqlChunks.join("\n"), "utf8");
   console.log(`Wrote migration SQL to ${args.output}`);
 }
