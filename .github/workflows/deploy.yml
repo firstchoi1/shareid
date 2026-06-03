@@ -42,6 +42,9 @@ jobs:
             ssh -n -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" \
               "if [ -d '${APP_DIR}/.git' ]; then \
                  cd '${APP_DIR}' && \
+                 if git ls-files --error-unmatch next-env.d.ts >/dev/null 2>&1; then \
+                   git restore --worktree --staged next-env.d.ts 2>/dev/null || git checkout -- next-env.d.ts; \
+                 fi && \
                  git pull --ff-only origin main && \
                  bash ./deploy.sh --skip-pull --app-name '${APP_NAME}' --app-port '${APP_PORT}' --app-dir '${APP_DIR}' && \
                  echo 'Deployed ${APP_NAME} at commit:' && \

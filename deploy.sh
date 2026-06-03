@@ -7,6 +7,13 @@ APP_NAME=""
 APP_PORT=""
 SKIP_PULL="false"
 
+restore_generated_files() {
+  if git ls-files --error-unmatch next-env.d.ts >/dev/null 2>&1; then
+    echo "===> Restore generated tracked file: next-env.d.ts"
+    git restore --worktree --staged next-env.d.ts 2>/dev/null || git checkout -- next-env.d.ts
+  fi
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --app-dir)
@@ -42,6 +49,8 @@ if [ -z "$APP_NAME" ] || [ -z "$APP_PORT" ]; then
 fi
 
 cd "$APP_DIR"
+
+restore_generated_files
 
 echo "===> Record current lockfile hash"
 PREV_LOCK_HASH="$(sha1sum package-lock.json 2>/dev/null | awk '{print $1}' || echo "")"
