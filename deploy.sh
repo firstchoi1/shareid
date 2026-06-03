@@ -82,7 +82,18 @@ NEW_MANIFEST_HASH="$(
   ) | sha1sum | awk '{print $1}'
 )"
 
+NEEDS_INSTALL="false"
 if [ "$FORCE_INSTALL" = "true" ] || [ ! -d node_modules ] || [ "$PREV_MANIFEST_HASH" != "$NEW_MANIFEST_HASH" ]; then
+  NEEDS_INSTALL="true"
+else
+  echo "===> Verify installed dependencies"
+  if ! npm ls --depth=0 >/dev/null 2>&1; then
+    echo "===> Dependency tree is incomplete, forcing npm ci"
+    NEEDS_INSTALL="true"
+  fi
+fi
+
+if [ "$NEEDS_INSTALL" = "true" ]; then
   echo "===> Install dependencies"
   npm ci
 else
