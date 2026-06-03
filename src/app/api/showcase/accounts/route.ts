@@ -5,7 +5,7 @@ import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
-function toPublicAccount(acc: AppleAccount) {
+function toPublicAccount(acc: AppleAccount, accountLabel: string) {
   return {
     id: acc.id,
     username: acc.username,
@@ -13,6 +13,7 @@ function toPublicAccount(acc: AppleAccount) {
     region_display: acc.region_display ?? null,
     last_check: acc.last_check ?? null,
     last_check_success: acc.last_check_success ?? null,
+    accountLabel,
   };
 }
 
@@ -40,9 +41,10 @@ export async function GET(request: Request) {
       appleAutoBaseUrl: config.appleAutoBaseUrl,
       appleAutoApiKey: config.appleAutoApiKey,
     });
+    const accountLabel = `${regionConfig.countryNote || regionConfig.label}账号`;
     return NextResponse.json({
       ok: true,
-      data: list.map((a) => toPublicAccount(a)),
+      data: list.map((a) => toPublicAccount(a, accountLabel)),
     });
   } catch (error) {
     const raw = error instanceof Error ? error.message : "托管站请求失败";

@@ -5,12 +5,14 @@ export type ShowcaseRegionConfig = {
   key: string;
   label: string;
   tagId: number | null;
+  countryNote: string;
 };
 
 export type SiteConfig = {
   purchaseUrl: string;
   appleAutoBaseUrl: string;
   appleAutoApiKey: string;
+  redeemModeEnabled: boolean;
   regions: ShowcaseRegionConfig[];
 };
 
@@ -27,13 +29,14 @@ const DEFAULT_CONFIG: SiteConfig = {
     process.env.SHOWCASE_APPLE_AUTO_API_KEY?.trim() ||
     process.env.APPLE_AUTO_API_KEY?.trim() ||
     "",
+  redeemModeEnabled: false,
   regions: [
-    { key: "us", label: "美区 ID", tagId: 1 },
-    { key: "us_rocket", label: "美区小火箭", tagId: 6 },
-    { key: "hk", label: "香港 ID", tagId: 2 },
-    { key: "jp", label: "日本 ID", tagId: 3 },
-    { key: "tw", label: "台湾 ID", tagId: 4 },
-    { key: "cn", label: "中国 ID", tagId: 5 },
+    { key: "us", label: "美区 ID", tagId: 1, countryNote: "美国" },
+    { key: "us_rocket", label: "美区小火箭", tagId: 6, countryNote: "美国" },
+    { key: "hk", label: "香港 ID", tagId: 2, countryNote: "香港" },
+    { key: "jp", label: "日本 ID", tagId: 3, countryNote: "日本" },
+    { key: "tw", label: "台湾 ID", tagId: 4, countryNote: "台湾" },
+    { key: "cn", label: "中国 ID", tagId: 5, countryNote: "中国" },
   ],
 };
 
@@ -53,6 +56,9 @@ function normalizeRegion(input: Partial<ShowcaseRegionConfig>, index: number): S
   const rawLabel = typeof input.label === "string" ? input.label.trim() : "";
   const label = rawLabel || key;
 
+  const rawCountryNote = typeof input.countryNote === "string" ? input.countryNote.trim() : "";
+  const countryNote = rawCountryNote || label.replace(/\s*ID$/i, "").trim() || label;
+
   const rawTag =
     typeof input.tagId === "number"
       ? input.tagId
@@ -62,7 +68,7 @@ function normalizeRegion(input: Partial<ShowcaseRegionConfig>, index: number): S
 
   const tagId = Number.isInteger(rawTag) && Number(rawTag) >= 0 ? Number(rawTag) : null;
 
-  return { key, label, tagId };
+  return { key, label, tagId, countryNote };
 }
 
 function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteConfig {
@@ -81,6 +87,11 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
       ? input.appleAutoApiKey.trim()
       : DEFAULT_CONFIG.appleAutoApiKey;
 
+  const redeemModeEnabled =
+    typeof input?.redeemModeEnabled === "boolean"
+      ? input.redeemModeEnabled
+      : DEFAULT_CONFIG.redeemModeEnabled;
+
   const rawRegions = Array.isArray(input?.regions) ? input.regions : DEFAULT_CONFIG.regions;
   const deduped = new Map<string, ShowcaseRegionConfig>();
 
@@ -97,6 +108,7 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
     purchaseUrl,
     appleAutoBaseUrl,
     appleAutoApiKey,
+    redeemModeEnabled,
     regions: regions.length > 0 ? regions : DEFAULT_CONFIG.regions,
   };
 }

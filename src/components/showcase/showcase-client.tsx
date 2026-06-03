@@ -15,6 +15,15 @@ type AccountRow = {
   region_display: string | null;
   last_check: string | null;
   last_check_success: boolean | null;
+  accountLabel?: string;
+};
+
+type RedeemResponse = {
+  accounts: AccountRow[];
+  activatedAt: string | null;
+  expiresAt: string | null;
+  expiresText: string;
+  status: string;
 };
 
 function CheckStatusLine({ a }: { a: AccountRow }) {
@@ -35,25 +44,29 @@ export function ShowcaseHome({
   children,
   purchaseUrl,
   regions,
+  redeemModeEnabled,
 }: {
   children?: React.ReactNode;
   purchaseUrl: string;
   regions: ShowcaseRegionConfig[];
+  redeemModeEnabled: boolean;
 }) {
   const [region, setRegion] = useState<string>(regions[0]?.key ?? "us");
   const [rows, setRows] = useState<AccountRow[]>([]);
   const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!redeemModeEnabled);
   const [copied, setCopied] = useState<string | null>(null);
-  const [passwordSheet, setPasswordSheet] = useState<{ id: number; password: string } | null>(
-    null
-  );
+  const [passwordSheet, setPasswordSheet] = useState<{ id: number; password: string } | null>(null);
   const [passwordQuiz, setPasswordQuiz] = useState<{ id: number; password: string } | null>(null);
   const [passwordWarningOpen, setPasswordWarningOpen] = useState(false);
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemInfo, setRedeemInfo] = useState<RedeemResponse | null>(null);
+  const [redeeming, setRedeeming] = useState(false);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (nextRegion: string) => {
+    if (redeemModeEnabled) return;
     setError(null);
     setLoading(true);
     try {
@@ -80,7 +93,7 @@ export function ShowcaseHome({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [redeemModeEnabled]);
 
   useEffect(() => {
     if (!regions.find((item) => item.key === region) && regions[0]) {
@@ -91,9 +104,10 @@ export function ShowcaseHome({
   }, [region, load, regions]);
 
   useEffect(() => {
+    if (redeemModeEnabled) return;
     const timer = window.setInterval(() => void load(region), 25_000);
     return () => window.clearInterval(timer);
-  }, [region, load]);
+  }, [region, load, redeemModeEnabled]);
 
   useEffect(() => {
     if (!passwordSheet) {
@@ -110,7 +124,10 @@ export function ShowcaseHome({
     return () => window.cancelAnimationFrame(id);
   }, [passwordSheet]);
 
-  const title = useMemo(() => regions.find((x) => x.key === region)?.label ?? "", [region, regions]);
+  const title = useMemo(
+    () => (redeemModeEnabled ? "兑换账号" : regions.find((x) => x.key === region)?.label ?? ""),
+    [region, regions, redeemModeEnabled]
+  );
 
   const flashCopied = useCallback((key: string) => {
     setCopied(key);
@@ -215,6 +232,8 @@ export function ShowcaseHome({
     </div>
   );
 
+  const visibleRows = redeemModeEnabled ? redeemInfo?.accounts ?? [] : rows;
+
   return (
     <>
       <div className="hidden md:flex md:flex-col md:gap-3">
@@ -238,32 +257,89 @@ export function ShowcaseHome({
             </div>
 
             <div className="p-3 sm:p-4 lg:p-5">
+              {redeemModeEnabled ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                    输入兑换码后，系统会按后台配置展示对应标签下的账号。兑换码首次成功兑换后开始计时，失效时间按上海时间显示。
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      value={redeemCode}
+                      onChange={(event) => setRedeemCode(event.target.value)}
+                      className="min-h-11 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
+                      placeholder="请输入兑换码"
+                    />
+                    <button
+                      type="button"
+                      disabled={redeeming}
+                      onClick={async () => {
+                        setRedeeming(true);
+                        setError(null);
+                        setHint(null);
+                        try {
+                          const res = await fetch("/api/showcase/redeem", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ code: redeemCode }),
+                          });
+                          const json = (await res.json().catch(() => ({}))) as {
+                            ok?: boolean;
+                            data?: RedeemResponse;
+                            message?: string;
+                          };
+                          if (!res.ok || !json.ok || !json.data) {
+                            setRedeemInfo(null);
+                            setError(json.message ?? "兑换失败");
+                            return;
+                          }
+                          setRedeemInfo(json.data);
+                          setHint(`兑换码状态：${json.data.status}`);
+                        } catch {
+                          setRedeemInfo(null);
+                          setError("网络错误");
+                        } finally {
+                          setRedeeming(false);
+                        }
+                      }}
+                      className="rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-3 text-base font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)] transition hover:from-indigo-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {redeeming ? "兑换中..." : "立即兑换"}
+                    </button>
+                  </div>
+                  {redeemInfo ? (
+                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm leading-6 text-indigo-900">
+                      失效时间：{redeemInfo.expiresText}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               {hint ? (
-                <p className="mb-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950 sm:text-[13px]">
+                <p className="mb-3 mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950 sm:text-[13px]">
                   {hint}
                 </p>
               ) : null}
               {error ? (
-                <p className="mb-3 rounded-lg border border-rose-200/80 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                <p className="mb-3 mt-3 rounded-lg border border-rose-200/80 bg-rose-50 px-3 py-2 text-sm text-rose-900">
                   {error}
                 </p>
               ) : null}
-              {loading && rows.length === 0 && !error ? (
+              {loading && visibleRows.length === 0 && !error ? (
                 <div className="space-y-3 py-2">
                   <div className="h-24 animate-pulse rounded-xl bg-muted/60" />
                   <div className="h-24 animate-pulse rounded-xl bg-muted/40" />
                 </div>
               ) : null}
-              {!loading && rows.length === 0 && !error ? (
+              {!loading && visibleRows.length === 0 && !error ? (
                 <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  暂无账号或尚未配置标签。
+                  {redeemModeEnabled ? "请输入兑换码后查看账号。" : "暂无账号或尚未配置标签。"}
                 </p>
               ) : null}
-              {rows.length > 0 ? (
-                <ul className="space-y-3">
-                  {rows.map((account) => (
+              {visibleRows.length > 0 ? (
+                <ul className="mt-3 space-y-3">
+                  {visibleRows.map((account) => (
                     <li
-                      key={account.id}
+                      key={`${account.id}-${account.username}`}
                       className="overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/80 shadow-sm ring-1 ring-slate-200/50"
                     >
                       <div className="flex min-w-0 items-start gap-3 p-3 sm:gap-3.5">
@@ -275,7 +351,7 @@ export function ShowcaseHome({
                         </div>
                         <div className="min-w-0 flex-1 pt-0.5">
                           <p className="text-xs font-medium text-slate-500">
-                            账号（下载完APP，请立即退出，避免锁机）
+                            {account.accountLabel ?? "账号"}（下载完APP，请立即退出，避免锁机）
                           </p>
                           <p className="mt-0.5 break-all font-mono text-sm leading-snug text-slate-900">
                             {account.username}
@@ -334,7 +410,7 @@ export function ShowcaseHome({
               复制密码
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              若本机限制剪贴板，请在下方再点一次「复制密码」，或全选文本手动复制。
+              若本机限制剪贴板，请在下方再点一次“复制密码”，或全选文本手动复制。
             </p>
             <input
               key={passwordSheet.id}
@@ -366,25 +442,6 @@ export function ShowcaseHome({
                 关闭
               </button>
             </div>
-            {typeof navigator !== "undefined" && typeof navigator.share === "function" ? (
-              <button
-                type="button"
-                className="mt-2 w-full rounded-lg border border-slate-200 py-2 text-sm text-slate-700"
-                onClick={() => {
-                  void navigator
-                    .share({ text: passwordSheet.password })
-                    .then(() => {
-                      flashCopied(`p-${passwordSheet.id}`);
-                      setPasswordSheet(null);
-                    })
-                    .catch(() => {
-                      /* 用户取消分享 */
-                    });
-                }}
-              >
-                用系统分享发送密码
-              </button>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -459,7 +516,7 @@ export function ShowcaseHome({
               ⚠️ 警告
             </h3>
             <p className="mt-6 text-center text-xl leading-9 text-slate-700 sm:text-[1.75rem]">
-              回答错误！！！共享账号禁止登陆设置
+              回答错误！！！共享账号禁止登录设置
             </p>
             <button
               type="button"

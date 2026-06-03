@@ -18,7 +18,11 @@ export default async function HomePage() {
         "bg-transparent"
       )}
     >
-      <ShowcaseHome purchaseUrl={config.purchaseUrl} regions={config.regions}>
+      <ShowcaseHome
+        purchaseUrl={config.purchaseUrl}
+        regions={config.regions}
+        redeemModeEnabled={config.redeemModeEnabled}
+      >
         <TutorialVideoModal purchaseUrl={config.purchaseUrl} />
         <div
           className={cn(
