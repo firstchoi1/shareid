@@ -42,7 +42,7 @@ jobs:
             printf '%s' "$SITES_CONTENT_B64" | base64 -d
           }
 
-          while IFS='|' read -r APP_NAME APP_DIR APP_PORT; do
+          while IFS='|' read -r APP_NAME APP_DIR APP_PORT || [ -n "${APP_NAME:-}" ]; do
             if [ -z "$APP_NAME" ] || [[ "$APP_NAME" == \#* ]]; then
               continue
             fi
