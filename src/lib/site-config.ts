@@ -1,6 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import { ensureCurrentSiteRecord } from "@/lib/current-site";
 import { hasDatabaseConfig, query, withTransaction } from "@/lib/db";
 
@@ -18,9 +15,6 @@ export type SiteConfig = {
   redeemModeEnabled: boolean;
   regions: ShowcaseRegionConfig[];
 };
-
-const CONFIG_DIR = path.join(process.cwd(), "data");
-const CONFIG_PATH = path.join(CONFIG_DIR, "site-config.json");
 
 const DEFAULT_CONFIG: SiteConfig = {
   purchaseUrl: "https://id188.vip/",
@@ -114,22 +108,6 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
     redeemModeEnabled,
     regions: regions.length > 0 ? regions : DEFAULT_CONFIG.regions,
   };
-}
-
-async function readFileConfig(): Promise<SiteConfig> {
-  try {
-    const raw = await readFile(CONFIG_PATH, "utf-8");
-    return normalizeConfig(JSON.parse(raw) as SiteConfig);
-  } catch {
-    return normalizeConfig(DEFAULT_CONFIG);
-  }
-}
-
-async function writeFileConfig(config: SiteConfig) {
-  const normalized = normalizeConfig(config);
-  await mkdir(CONFIG_DIR, { recursive: true });
-  await writeFile(CONFIG_PATH, JSON.stringify(normalized, null, 2), "utf-8");
-  return normalized;
 }
 
 type SiteConfigRow = {
@@ -239,15 +217,11 @@ export async function getSiteConfig(): Promise<SiteConfig> {
     if (config) return config;
   }
 
-  return readFileConfig();
+  return normalizeConfig(DEFAULT_CONFIG);
 }
 
 export async function saveSiteConfig(config: SiteConfig) {
-  if (!hasDatabaseConfig()) {
-    return writeFileConfig(config);
-  }
+  if (!hasDatabaseConfig()) return normalizeConfig(config);
 
-  const saved = await writeDatabaseConfig(config);
-  await writeFileConfig(saved);
-  return saved;
+  return writeDatabaseConfig(config);
 }

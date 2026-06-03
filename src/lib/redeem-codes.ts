@@ -1,6 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import path from "node:path";
 
 import { ensureCurrentSiteRecord } from "@/lib/current-site";
 import { hasDatabaseConfig, query, withTransaction } from "@/lib/db";
@@ -27,10 +25,6 @@ export type RedeemCodeItem = {
   bindings: RedeemCodeBinding[];
 };
 
-type RedeemStore = {
-  items: RedeemCodeItem[];
-};
-
 type CreateBatchInput = {
   quantity: number;
   prefix?: string;
@@ -39,9 +33,6 @@ type CreateBatchInput = {
   note?: string;
   bindings: RedeemCodeBinding[];
 };
-
-const CONFIG_DIR = path.join(process.cwd(), "data");
-const REDEEM_CODES_PATH = path.join(CONFIG_DIR, "redeem-codes.json");
 
 type DbCodeRow = {
   id: number;
@@ -133,25 +124,6 @@ function normalizeItem(input: Partial<RedeemCodeItem>): RedeemCodeItem | null {
   };
 }
 
-async function readFileStore(): Promise<RedeemStore> {
-  try {
-    const raw = await readFile(REDEEM_CODES_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as RedeemStore;
-    return {
-      items: Array.isArray(parsed?.items)
-        ? parsed.items.map(normalizeItem).filter(Boolean) as RedeemCodeItem[]
-        : [],
-    };
-  } catch {
-    return { items: [] };
-  }
-}
-
-async function writeFileStore(store: RedeemStore) {
-  await mkdir(CONFIG_DIR, { recursive: true });
-  await writeFile(REDEEM_CODES_PATH, JSON.stringify(store, null, 2), "utf-8");
-}
-
 function makeCode(prefix?: string) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const segment = (length: number) =>
@@ -208,22 +180,12 @@ async function readDatabaseItems(): Promise<RedeemCodeItem[] | null> {
   }));
 }
 
-async function syncFileStoreFromDatabase(items: RedeemCodeItem[]) {
-  await writeFileStore({ items });
-}
-
 async function readActiveStore() {
-  if (!hasDatabaseConfig()) {
-    return { source: "file" as const, items: (await readFileStore()).items };
-  }
+  if (!hasDatabaseConfig()) return { source: "memory" as const, items: [] };
 
   const items = await readDatabaseItems();
-  if (items) {
-    await syncFileStoreFromDatabase(items);
-    return { source: "db" as const, items };
-  }
-
-  return { source: "file" as const, items: (await readFileStore()).items };
+  if (items) return { source: "db" as const, items };
+  return { source: "memory" as const, items: [] };
 }
 
 export async function listRedeemCodes() {
@@ -312,57 +274,15 @@ async function createBatchInDatabase(input: CreateBatchInput, regions: ShowcaseR
     return nextItems;
   });
 
-  await syncFileStoreFromDatabase(await listRedeemCodes());
   return created;
 }
 
 export async function createRedeemCodesBatch(input: CreateBatchInput, regions: ShowcaseRegionConfig[]) {
-  if (hasDatabaseConfig()) {
-    return createBatchInDatabase(input, regions);
+  if (!hasDatabaseConfig()) {
+    throw new Error("DATABASE_URL 未配置，兑换码功能无法使用");
   }
 
-  const quantity = Number.isInteger(input.quantity) && input.quantity > 0 ? input.quantity : 1;
-  const durationType = input.durationType;
-  const durationValue = durationType === "forever" ? null : input.durationValue ?? 1;
-  const note = input.note?.trim() ?? "";
-
-  const validRegionKeys = new Set(regions.map((region) => region.key));
-  const bindings = (input.bindings ?? [])
-    .map(normalizeBinding)
-    .filter((item): item is RedeemCodeBinding => Boolean(item))
-    .filter((item) => validRegionKeys.has(item.regionKey));
-
-  if (bindings.length === 0) {
-    throw new Error("请至少配置一个有效的兑换标签");
-  }
-
-  const store = await readFileStore();
-  const existingCodes = new Set(store.items.map((item) => item.code));
-  const created: RedeemCodeItem[] = [];
-
-  for (let index = 0; index < quantity; index += 1) {
-    let code = makeCode(input.prefix);
-    while (existingCodes.has(code)) {
-      code = makeCode(input.prefix);
-    }
-    existingCodes.add(code);
-    created.push({
-      id: randomBytes(12).toString("hex"),
-      code,
-      enabled: true,
-      createdAt: new Date().toISOString(),
-      activatedAt: null,
-      expiresAt: null,
-      durationType,
-      durationValue,
-      note,
-      bindings,
-    });
-  }
-
-  store.items.unshift(...created);
-  await writeFileStore(store);
-  return created;
+  return createBatchInDatabase(input, regions);
 }
 
 async function updateRedeemCodeInDatabase(
@@ -395,7 +315,6 @@ async function updateRedeemCodeInDatabase(
 
   const items = await readDatabaseItems();
   if (items) {
-    await syncFileStoreFromDatabase(items);
     const item = items.find((entry) => entry.id === id);
     if (item) return item;
   }
@@ -407,19 +326,11 @@ export async function updateRedeemCode(
   id: string,
   patch: Partial<Pick<RedeemCodeItem, "enabled" | "note">>
 ) {
-  if (hasDatabaseConfig()) {
-    return updateRedeemCodeInDatabase(id, patch);
+  if (!hasDatabaseConfig()) {
+    throw new Error("DATABASE_URL 未配置，兑换码功能无法使用");
   }
 
-  const store = await readFileStore();
-  const item = store.items.find((entry) => entry.id === id);
-  if (!item) {
-    throw new Error("兑换码不存在");
-  }
-  if (typeof patch.enabled === "boolean") item.enabled = patch.enabled;
-  if (typeof patch.note === "string") item.note = patch.note.trim();
-  await writeFileStore(store);
-  return item;
+  return updateRedeemCodeInDatabase(id, patch);
 }
 
 async function deleteRedeemCodeInDatabase(id: string) {
@@ -429,22 +340,15 @@ async function deleteRedeemCodeInDatabase(id: string) {
   }
 
   await query(`DELETE FROM redeem_codes WHERE id = $1::bigint AND site_id = $2`, [Number(id), site.id]);
-  const items = await readDatabaseItems();
-  if (items) {
-    await syncFileStoreFromDatabase(items);
-  }
+  return;
 }
 
 export async function deleteRedeemCode(id: string) {
-  if (hasDatabaseConfig()) {
-    await deleteRedeemCodeInDatabase(id);
-    return;
+  if (!hasDatabaseConfig()) {
+    throw new Error("DATABASE_URL 未配置，兑换码功能无法使用");
   }
 
-  const store = await readFileStore();
-  const next = store.items.filter((entry) => entry.id !== id);
-  store.items = next;
-  await writeFileStore(store);
+  await deleteRedeemCodeInDatabase(id);
 }
 
 async function activateAndResolveRedeemCodeInDatabase(codeInput: string) {
@@ -491,7 +395,6 @@ async function activateAndResolveRedeemCodeInDatabase(codeInput: string) {
 
   const items = await readDatabaseItems();
   if (items) {
-    await syncFileStoreFromDatabase(items);
     const item = items.find((entry) => entry.code === code);
     if (item) return item;
   }
@@ -500,29 +403,11 @@ async function activateAndResolveRedeemCodeInDatabase(codeInput: string) {
 }
 
 export async function activateAndResolveRedeemCode(codeInput: string) {
-  if (hasDatabaseConfig()) {
-    return activateAndResolveRedeemCodeInDatabase(codeInput);
+  if (!hasDatabaseConfig()) {
+    throw new Error("DATABASE_URL 未配置，兑换码功能无法使用");
   }
 
-  const code = normalizeCode(codeInput);
-  const store = await readFileStore();
-  const item = store.items.find((entry) => entry.code === code);
-  if (!item) throw new Error("兑换码不存在");
-  if (!item.enabled) throw new Error("兑换码已禁用");
-
-  const now = new Date();
-  if (!item.activatedAt) {
-    item.activatedAt = now.toISOString();
-    const expiresAt = computeExpiryFromActivation(now, item.durationType, item.durationValue);
-    item.expiresAt = expiresAt ? expiresAt.toISOString() : null;
-    await writeFileStore(store);
-  }
-
-  if (item.expiresAt && new Date(item.expiresAt).getTime() <= now.getTime()) {
-    throw new Error("兑换码已失效");
-  }
-
-  return item;
+  return activateAndResolveRedeemCodeInDatabase(codeInput);
 }
 
 export function describeRedeemCode(item: RedeemCodeItem) {

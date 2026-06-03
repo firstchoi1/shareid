@@ -7,6 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DOMAIN=""
 ADMIN_PASSWORD=""
 REFERENCE_APP_DIR="/var/www/shareid"
+REFERENCE_SITE_KEY=""
 REGISTRY_FILE="/etc/shareid/sites.txt"
 CADDYFILE="/etc/caddy/Caddyfile"
 MIN_PORT="3003"
@@ -18,6 +19,7 @@ Usage:
 
 Optional:
   --reference-app-dir <dir>   Default: /var/www/shareid
+  --reference-site-key <key>  Default: inferred from reference app dir
   --registry-file <path>      Default: /etc/shareid/sites.txt
   --caddyfile <path>          Default: /etc/caddy/Caddyfile
   --min-port <port>           Default: 3003
@@ -36,6 +38,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --reference-app-dir)
       REFERENCE_APP_DIR="$2"
+      shift 2
+      ;;
+    --reference-site-key)
+      REFERENCE_SITE_KEY="$2"
       shift 2
       ;;
     --registry-file)
@@ -133,6 +139,24 @@ if [ -z "$REPO_URL" ]; then
   exit 1
 fi
 
+if [ -z "$REFERENCE_SITE_KEY" ] && [ -f "$REFERENCE_APP_DIR/.env" ]; then
+  REFERENCE_SITE_KEY="$(
+    awk -F'=' '$1=="SITE_KEY" { print $2 }' "$REFERENCE_APP_DIR/.env" \
+      | tail -n 1 \
+      | tr -d '"' \
+      | tr -d "'" \
+      | tr '[:upper:]' '[:lower:]'
+  )"
+fi
+
+if [ -z "$REFERENCE_SITE_KEY" ]; then
+  if [ "$(basename "$REFERENCE_APP_DIR")" = "shareid" ]; then
+    REFERENCE_SITE_KEY="pcyid"
+  else
+    REFERENCE_SITE_KEY="$(basename "$REFERENCE_APP_DIR" | tr '[:upper:]' '[:lower:]')"
+  fi
+fi
+
 if [ ! -d "$APP_DIR/.git" ]; then
   git clone "$REPO_URL" "$APP_DIR"
 fi
@@ -174,34 +198,77 @@ set_env_var() {
 set_env_var "SITE_KEY" "$SITE_KEY" "$APP_DIR/.env"
 set_env_var "SHAREID_ADMIN_PASSWORD" "$ADMIN_PASSWORD" "$APP_DIR/.env"
 
-mkdir -p "$APP_DIR/data"
-if [ ! -f "$APP_DIR/data/site-config.json" ] && [ -f "$REFERENCE_APP_DIR/data/site-config.json" ]; then
-  cp "$REFERENCE_APP_DIR/data/site-config.json" "$APP_DIR/data/site-config.json"
-fi
-
-if [ ! -f "$APP_DIR/data/redeem-codes.json" ]; then
-  printf '{\n  "items": []\n}\n' > "$APP_DIR/data/redeem-codes.json"
-fi
-
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-cat > "$TEMP_DIR/site-manifest.json" <<EOF
-[
-  {
-    "siteKey": "$SITE_KEY",
-    "siteName": "$SITE_NAME",
-    "domain": "$WWW_DOMAIN",
-    "appDir": "$APP_DIR"
-  }
-]
+cat > "$TEMP_DIR/site-bootstrap.sql" <<EOF
+BEGIN;
+
+INSERT INTO sites (
+  site_key,
+  site_name,
+  domain,
+  purchase_url,
+  apple_auto_base_url,
+  apple_auto_api_key,
+  redeem_mode_enabled,
+  timezone
+)
+SELECT
+  '$SITE_KEY',
+  '$SITE_NAME',
+  '$WWW_DOMAIN',
+  purchase_url,
+  apple_auto_base_url,
+  apple_auto_api_key,
+  FALSE,
+  timezone
+FROM sites
+WHERE site_key = '$REFERENCE_SITE_KEY'
+ON CONFLICT (site_key) DO UPDATE SET
+  site_name = EXCLUDED.site_name,
+  domain = EXCLUDED.domain,
+  updated_at = NOW();
+
+DELETE FROM site_regions
+WHERE site_id = (SELECT id FROM sites WHERE site_key = '$SITE_KEY');
+
+DELETE FROM redeem_logs
+WHERE site_id = (SELECT id FROM sites WHERE site_key = '$SITE_KEY');
+
+DELETE FROM redeem_codes
+WHERE site_id = (SELECT id FROM sites WHERE site_key = '$SITE_KEY');
+
+INSERT INTO site_regions (
+  site_id,
+  region_key,
+  region_label,
+  tag_id,
+  country_note,
+  sort_order,
+  created_at,
+  updated_at
+)
+SELECT
+  target.id,
+  source.region_key,
+  source.region_label,
+  source.tag_id,
+  source.country_note,
+  source.sort_order,
+  NOW(),
+  NOW()
+FROM site_regions source
+JOIN sites source_site
+  ON source_site.id = source.site_id
+ AND source_site.site_key = '$REFERENCE_SITE_KEY'
+JOIN sites target
+  ON target.site_key = '$SITE_KEY';
+
+COMMIT;
 EOF
 
-node "$REPO_ROOT/scripts/generate-sites-db-migration.mjs" \
-  --manifest "$TEMP_DIR/site-manifest.json" \
-  --output "$TEMP_DIR/site-migration.sql"
-
-docker exec -i shareid-postgres psql -U shareid_user -d shareid < "$TEMP_DIR/site-migration.sql"
+docker exec -i shareid-postgres psql -U shareid_user -d shareid < "$TEMP_DIR/site-bootstrap.sql"
 
 if [ -z "$EXISTING_LINE" ]; then
   printf '%s|%s|%s\n' "$APP_NAME" "$APP_DIR" "$APP_PORT" >> "$REGISTRY_FILE"
