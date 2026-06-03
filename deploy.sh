@@ -7,11 +7,13 @@ APP_NAME=""
 APP_PORT=""
 SKIP_PULL="false"
 
-restore_generated_files() {
-  if git ls-files --error-unmatch next-env.d.ts >/dev/null 2>&1; then
-    echo "===> Restore generated tracked file: next-env.d.ts"
-    git restore --worktree --staged next-env.d.ts 2>/dev/null || git checkout -- next-env.d.ts
-  fi
+restore_safe_tracked_files() {
+  for tracked_file in next-env.d.ts package-lock.json; do
+    if git ls-files --error-unmatch "$tracked_file" >/dev/null 2>&1; then
+      echo "===> Restore tracked deployment artifact: $tracked_file"
+      git restore --worktree --staged "$tracked_file" 2>/dev/null || git checkout -- "$tracked_file"
+    fi
+  done
 }
 
 while [ "$#" -gt 0 ]; do
@@ -50,7 +52,7 @@ fi
 
 cd "$APP_DIR"
 
-restore_generated_files
+restore_safe_tracked_files
 
 echo "===> Record current lockfile hash"
 PREV_LOCK_HASH="$(sha1sum package-lock.json 2>/dev/null | awk '{print $1}' || echo "")"
