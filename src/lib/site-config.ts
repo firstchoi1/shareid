@@ -1,6 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { ensureCurrentSiteRecord } from "@/lib/current-site";
+import { hasDatabaseConfig, query, withTransaction } from "@/lib/db";
+
 export type ShowcaseRegionConfig = {
   key: string;
   label: string;
@@ -113,7 +116,7 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
   };
 }
 
-export async function getSiteConfig(): Promise<SiteConfig> {
+async function readFileConfig(): Promise<SiteConfig> {
   try {
     const raw = await readFile(CONFIG_PATH, "utf-8");
     return normalizeConfig(JSON.parse(raw) as SiteConfig);
@@ -122,9 +125,129 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   }
 }
 
-export async function saveSiteConfig(config: SiteConfig) {
+async function writeFileConfig(config: SiteConfig) {
   const normalized = normalizeConfig(config);
   await mkdir(CONFIG_DIR, { recursive: true });
   await writeFile(CONFIG_PATH, JSON.stringify(normalized, null, 2), "utf-8");
   return normalized;
+}
+
+type SiteConfigRow = {
+  purchase_url: string | null;
+  apple_auto_base_url: string | null;
+  apple_auto_api_key: string | null;
+  redeem_mode_enabled: boolean;
+};
+
+type SiteRegionRow = {
+  region_key: string;
+  region_label: string;
+  tag_id: number | null;
+  country_note: string | null;
+};
+
+async function readDatabaseConfig(): Promise<SiteConfig | null> {
+  const site = await ensureCurrentSiteRecord();
+  if (!site) return null;
+
+  const [siteResult, regionsResult] = await Promise.all([
+    query<SiteConfigRow>(
+      `SELECT purchase_url, apple_auto_base_url, apple_auto_api_key, redeem_mode_enabled
+       FROM sites
+       WHERE id = $1
+       LIMIT 1`,
+      [site.id]
+    ),
+    query<SiteRegionRow>(
+      `SELECT region_key, region_label, tag_id, country_note
+       FROM site_regions
+       WHERE site_id = $1
+       ORDER BY sort_order ASC, id ASC`,
+      [site.id]
+    ),
+  ]);
+
+  const siteRow = siteResult.rows[0];
+  if (!siteRow) return null;
+
+  return normalizeConfig({
+    purchaseUrl: siteRow.purchase_url ?? DEFAULT_CONFIG.purchaseUrl,
+    appleAutoBaseUrl: siteRow.apple_auto_base_url ?? DEFAULT_CONFIG.appleAutoBaseUrl,
+    appleAutoApiKey: siteRow.apple_auto_api_key ?? DEFAULT_CONFIG.appleAutoApiKey,
+    redeemModeEnabled: siteRow.redeem_mode_enabled,
+    regions: regionsResult.rows.map((row) => ({
+      key: row.region_key,
+      label: row.region_label,
+      tagId: row.tag_id,
+      countryNote: row.country_note ?? "",
+    })),
+  });
+}
+
+async function writeDatabaseConfig(config: SiteConfig) {
+  const site = await ensureCurrentSiteRecord();
+  if (!site) {
+    throw new Error("Current site record is unavailable");
+  }
+
+  const normalized = normalizeConfig(config);
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE sites
+       SET purchase_url = $2,
+           apple_auto_base_url = $3,
+           apple_auto_api_key = $4,
+           redeem_mode_enabled = $5,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [
+        site.id,
+        normalized.purchaseUrl,
+        normalized.appleAutoBaseUrl,
+        normalized.appleAutoApiKey,
+        normalized.redeemModeEnabled,
+      ]
+    );
+
+    await client.query(`DELETE FROM site_regions WHERE site_id = $1`, [site.id]);
+
+    for (const [index, region] of normalized.regions.entries()) {
+      await client.query(
+        `INSERT INTO site_regions (
+           site_id,
+           region_key,
+           region_label,
+           tag_id,
+           country_note,
+           sort_order,
+           created_at,
+           updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        [site.id, region.key, region.label, region.tagId, region.countryNote, index]
+      );
+    }
+  });
+
+  return normalized;
+}
+
+export async function getSiteConfig(): Promise<SiteConfig> {
+  if (hasDatabaseConfig()) {
+    const config = await readDatabaseConfig();
+    if (config) return config;
+  }
+
+  return readFileConfig();
+}
+
+export async function saveSiteConfig(config: SiteConfig) {
+  if (!hasDatabaseConfig()) {
+    return writeFileConfig(config);
+  }
+
+  const saved = await writeDatabaseConfig(config);
+  await writeFileConfig(saved);
+  return saved;
 }
