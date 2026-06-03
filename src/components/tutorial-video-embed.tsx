@@ -27,7 +27,8 @@ const BILIBILI_BVID =
     ? ""
     : (BILIBILI_BVID_RAW?.trim() || "BV1XFQwBQEWZ");
 
-const USE_BILIBILI = BILIBILI_BVID.length > 0;
+const USE_SELF_HOSTED_VIDEO = VIDEO_SRC.length > 0 || VIDEO_WEBM_SRC.length > 0;
+const USE_BILIBILI = !USE_SELF_HOSTED_VIDEO && BILIBILI_BVID.length > 0;
 
 function bilibiliEmbedSrcInline(bvid: string) {
   const q = new URLSearchParams({
