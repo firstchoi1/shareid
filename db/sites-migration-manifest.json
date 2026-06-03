@@ -1,0 +1,26 @@
+[
+  {
+    "siteKey": "pcyid",
+    "siteName": "PCYID",
+    "domain": "www.pcyid.store",
+    "appDir": "/var/www/shareid"
+  },
+  {
+    "siteKey": "ydzid",
+    "siteName": "YDZID",
+    "domain": "www.ydzid.store",
+    "appDir": "/var/www/ydzid"
+  },
+  {
+    "siteKey": "qsid",
+    "siteName": "QSID",
+    "domain": "www.qsid.store",
+    "appDir": "/var/www/qsid"
+  },
+  {
+    "siteKey": "wzx",
+    "siteName": "WZX",
+    "domain": "",
+    "appDir": "/var/www/wzx"
+  }
+]

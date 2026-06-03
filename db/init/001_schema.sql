@@ -1,0 +1,55 @@
+CREATE TABLE IF NOT EXISTS sites (
+  id BIGSERIAL PRIMARY KEY,
+  site_key VARCHAR(64) NOT NULL UNIQUE,
+  site_name VARCHAR(128) NOT NULL,
+  domain VARCHAR(255),
+  purchase_url TEXT,
+  apple_auto_base_url TEXT,
+  apple_auto_api_key TEXT,
+  redeem_mode_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS site_regions (
+  id BIGSERIAL PRIMARY KEY,
+  site_id BIGINT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  region_key VARCHAR(64) NOT NULL,
+  region_label VARCHAR(128) NOT NULL,
+  tag_id INTEGER,
+  country_note VARCHAR(128) NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(site_id, region_key)
+);
+
+CREATE TABLE IF NOT EXISTS redeem_codes (
+  id BIGSERIAL PRIMARY KEY,
+  site_id BIGINT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  code VARCHAR(128) NOT NULL UNIQUE,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  duration_type VARCHAR(16) NOT NULL,
+  duration_value INTEGER,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  activated_at TIMESTAMPTZ NULL,
+  expires_at TIMESTAMPTZ NULL
+);
+
+CREATE TABLE IF NOT EXISTS redeem_code_bindings (
+  id BIGSERIAL PRIMARY KEY,
+  redeem_code_id BIGINT NOT NULL REFERENCES redeem_codes(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL,
+  count INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS redeem_logs (
+  id BIGSERIAL PRIMARY KEY,
+  redeem_code_id BIGINT NOT NULL REFERENCES redeem_codes(id) ON DELETE CASCADE,
+  site_id BIGINT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  redeemed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip VARCHAR(128),
+  user_agent TEXT
+);

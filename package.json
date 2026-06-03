@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate-site-migration": "node scripts/generate-sites-db-migration.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
