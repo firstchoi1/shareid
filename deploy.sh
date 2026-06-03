@@ -6,6 +6,7 @@ APP_DIR="$(pwd)"
 APP_NAME=""
 APP_PORT=""
 SKIP_PULL="false"
+FORCE_INSTALL="false"
 
 restore_safe_tracked_files() {
   for tracked_file in next-env.d.ts package-lock.json; do
@@ -38,6 +39,10 @@ while [ "$#" -gt 0 ]; do
       SKIP_PULL="true"
       shift
       ;;
+    --force-install)
+      FORCE_INSTALL="true"
+      shift
+      ;;
     *)
       echo "Unknown argument: $1" >&2
       exit 1
@@ -46,7 +51,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -z "$APP_NAME" ] || [ -z "$APP_PORT" ]; then
-  echo "Usage: bash ./deploy.sh --app-name <name> --app-port <port> [--app-dir <dir>] [--branch <branch>] [--skip-pull]" >&2
+  echo "Usage: bash ./deploy.sh --app-name <name> --app-port <port> [--app-dir <dir>] [--branch <branch>] [--skip-pull] [--force-install]" >&2
   exit 1
 fi
 
@@ -54,8 +59,13 @@ cd "$APP_DIR"
 
 restore_safe_tracked_files
 
-echo "===> Record current lockfile hash"
-PREV_LOCK_HASH="$(sha1sum package-lock.json 2>/dev/null | awk '{print $1}' || echo "")"
+echo "===> Record current manifest hash"
+PREV_MANIFEST_HASH="$(
+  (
+    sha1sum package.json 2>/dev/null || true
+    sha1sum package-lock.json 2>/dev/null || true
+  ) | sha1sum | awk '{print $1}'
+)"
 
 if [ "$SKIP_PULL" != "true" ]; then
   echo "===> Pull latest code"
@@ -64,10 +74,15 @@ else
   echo "===> Skip git pull (requested by caller)"
 fi
 
-echo "===> Record new lockfile hash"
-NEW_LOCK_HASH="$(sha1sum package-lock.json 2>/dev/null | awk '{print $1}' || echo "")"
+echo "===> Record new manifest hash"
+NEW_MANIFEST_HASH="$(
+  (
+    sha1sum package.json 2>/dev/null || true
+    sha1sum package-lock.json 2>/dev/null || true
+  ) | sha1sum | awk '{print $1}'
+)"
 
-if [ ! -d node_modules ] || [ "$PREV_LOCK_HASH" != "$NEW_LOCK_HASH" ]; then
+if [ "$FORCE_INSTALL" = "true" ] || [ ! -d node_modules ] || [ "$PREV_MANIFEST_HASH" != "$NEW_MANIFEST_HASH" ]; then
   echo "===> Install dependencies"
   npm ci
 else

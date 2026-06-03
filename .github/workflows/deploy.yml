@@ -62,8 +62,15 @@ jobs:
               fi
             done
 
+            BEFORE_REV="$(git rev-parse HEAD)"
             git pull --ff-only origin main
-            bash ./deploy.sh --skip-pull --app-name "${APP_NAME}" --app-port "${APP_PORT}" --app-dir "${APP_DIR}"
+            AFTER_REV="$(git rev-parse HEAD)"
+            EXTRA_DEPLOY_ARGS=""
+            if ! git diff --quiet "$BEFORE_REV" "$AFTER_REV" -- package.json package-lock.json; then
+              EXTRA_DEPLOY_ARGS="--force-install"
+            fi
+
+            bash ./deploy.sh --skip-pull --app-name "${APP_NAME}" --app-port "${APP_PORT}" --app-dir "${APP_DIR}" ${EXTRA_DEPLOY_ARGS}
             echo "Deployed ${APP_NAME} at commit:"
             git rev-parse --short HEAD
           done < <(decode_sites)
