@@ -34,28 +34,14 @@ type RedeemBatchForm = {
 const TAB_ITEMS: Array<{
   key: AdminTab;
   label: string;
-  description: string;
   icon: typeof LayoutDashboard;
 }> = [
-  {
-    key: "overview",
-    label: "总览",
-    description: "购买链接、托管接口、显示开关",
-    icon: LayoutDashboard,
-  },
-  {
-    key: "regions",
-    label: "分类标签配置",
-    description: "前台分类名、标签 ID、国家备注",
-    icon: Tags,
-  },
-  {
-    key: "redeem",
-    label: "兑换码管理",
-    description: "批量生成、状态管理、复制兑换码",
-    icon: Ticket,
-  },
+  { key: "overview", label: "总览", icon: LayoutDashboard },
+  { key: "regions", label: "分类标签配置", icon: Tags },
+  { key: "redeem", label: "兑换码管理", icon: Ticket },
 ];
+
+const REDEEM_BATCH_FORM_STORAGE_KEY = "shareid-admin-redeem-batch-form";
 
 function RedeemStatus({ item }: { item: RedeemCodeItem }) {
   if (!item.enabled) return <span className="text-rose-600">已禁用</span>;
@@ -102,6 +88,18 @@ function SectionCard({
   );
 }
 
+function getRedeemDurationLabel(item: RedeemCodeItem) {
+  if (!item.activatedAt) {
+    return durationText(item.durationType, item.durationValue);
+  }
+
+  if (!item.expiresAt) {
+    return "永久有效";
+  }
+
+  return `${formatShanghaiTime(item.expiresAt)} 到期`;
+}
+
 export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig }) {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [config, setConfig] = useState(initialConfig);
@@ -126,6 +124,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
     () => config.regions.map((region) => ({ value: region.key, label: region.label })),
     [config.regions]
   );
+
   const redeemPageSize = 30;
   const redeemPageCount = Math.max(1, Math.ceil(codes.length / redeemPageSize));
   const pagedCodes = useMemo(
@@ -144,6 +143,45 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
         setCodesLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(REDEEM_BATCH_FORM_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<RedeemBatchForm>;
+      setBatchForm((prev) => ({
+        ...prev,
+        quantity: typeof parsed.quantity === "number" && parsed.quantity > 0 ? parsed.quantity : prev.quantity,
+        durationType:
+          parsed.durationType === "day" ||
+          parsed.durationType === "month" ||
+          parsed.durationType === "year" ||
+          parsed.durationType === "forever"
+            ? parsed.durationType
+            : prev.durationType,
+        durationValue:
+          typeof parsed.durationValue === "number" && parsed.durationValue > 0
+            ? parsed.durationValue
+            : prev.durationValue,
+        note: typeof parsed.note === "string" ? parsed.note : prev.note,
+        bindings:
+          Array.isArray(parsed.bindings) && parsed.bindings.length > 0
+            ? parsed.bindings
+                .filter(
+                  (item): item is RedeemBindingDraft =>
+                    !!item &&
+                    typeof item.regionKey === "string" &&
+                    item.regionKey.trim() !== "" &&
+                    typeof item.count === "number" &&
+                    item.count > 0
+                )
+                .map((item) => ({ regionKey: item.regionKey, count: item.count }))
+            : prev.bindings,
+      }));
+    } catch {
+      // Ignore malformed local storage values.
+    }
   }, []);
 
   async function saveConfigSection(section: AdminTab, successText: string) {
@@ -173,17 +211,27 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
     }
   }
 
+  function saveRedeemBatchConfig() {
+    try {
+      const payload: RedeemBatchForm = {
+        ...batchForm,
+        prefix: "",
+      };
+      window.localStorage.setItem(REDEEM_BATCH_FORM_STORAGE_KEY, JSON.stringify(payload));
+      setMessage("兑换码生成配置已保存。");
+      setError(null);
+    } catch {
+      setError("兑换码生成配置保存失败");
+    }
+  }
+
   const saveButtonClass =
     "inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.22)] transition hover:from-indigo-600 hover:via-violet-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60";
 
   const sidebar = (
     <aside className="flex h-full flex-col rounded-[32px] border border-slate-200/80 bg-white p-4 shadow-[0_10px_40px_rgba(148,163,184,0.12)]">
       <div className="rounded-[28px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 px-5 py-6 text-white shadow-[0_18px_40px_rgba(99,102,241,0.28)]">
-        <p className="text-sm font-semibold text-white/80">后台导航</p>
-        <h1 className="mt-2 text-[2.1rem] font-extrabold tracking-tight">ShareID 后台</h1>
-        <p className="mt-3 text-sm leading-6 text-white/85">
-          左侧切换分类，右侧全屏编辑内容。每一页都有独立的保存入口。
-        </p>
+        <h1 className="text-[2.1rem] font-extrabold tracking-tight">ShareID 后台</h1>
       </div>
 
       <nav className="mt-5 space-y-3">
@@ -196,7 +244,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               type="button"
               onClick={() => setActiveTab(item.key)}
               className={[
-                "flex w-full items-start gap-3 rounded-[22px] border px-4 py-4 text-left transition",
+                "flex w-full items-center gap-3 rounded-[22px] border px-4 py-4 text-left transition",
                 active
                   ? "border-slate-900 bg-slate-900 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
                   : "border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:bg-indigo-50/40",
@@ -204,18 +252,13 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
             >
               <span
                 className={[
-                  "mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl",
+                  "flex size-11 shrink-0 items-center justify-center rounded-2xl",
                   active ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600",
                 ].join(" ")}
               >
                 <Icon className="size-5" />
               </span>
-              <span className="min-w-0">
-                <span className="block text-base font-bold">{item.label}</span>
-                <span className={["mt-1 block text-sm leading-6", active ? "text-white/75" : "text-slate-500"].join(" ")}>
-                  {item.description}
-                </span>
-              </span>
+              <span className="block text-base font-bold">{item.label}</span>
             </button>
           );
         })}
@@ -238,7 +281,6 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
     <div className="space-y-6">
       <SectionCard
         title="总览"
-        description="统一管理购买链接、当前站点的托管接口，以及页面显示开关。"
         actions={
           <button
             type="button"
@@ -347,7 +389,6 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
     <div className="space-y-6">
       <SectionCard
         title="分类标签配置"
-        description="分类 key 由系统内部维护。这里只编辑前台分类名、标签 ID 和国家备注。"
         actions={
           <div className="flex flex-wrap gap-3">
             <button
@@ -458,54 +499,61 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
       <SectionCard
         title="兑换码管理"
         description="支持批量生成、首次兑换后开始计时，并按上海时间显示状态和失效时间。"
-        actions={null}
       >
         <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="space-y-3">
               {batchForm.bindings.map((binding, index) => (
                 <div
                   key={`${binding.regionKey}-${index}`}
-                  className="grid gap-3 xl:grid-cols-[1.45fr_0.9fr_auto]"
+                  className="grid gap-3 xl:grid-cols-[1.45fr_0.95fr_auto]"
                 >
-                  <select
-                    value={binding.regionKey}
-                    onChange={(event) => {
-                      const next = [...batchForm.bindings];
-                      next[index] = { ...binding, regionKey: event.target.value };
-                      setBatchForm((prev) => ({ ...prev, bindings: next }));
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                  >
-                    {regionOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={1}
-                    value={binding.count}
-                    onChange={(event) => {
-                      const next = [...batchForm.bindings];
-                      next[index] = { ...binding, count: Number(event.target.value) || 1 };
-                      setBatchForm((prev) => ({ ...prev, bindings: next }));
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setBatchForm((prev) => ({
-                        ...prev,
-                        bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
-                      }))
-                    }
-                    className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-100"
-                  >
-                    删除
-                  </button>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">标签选择</span>
+                    <select
+                      value={binding.regionKey}
+                      onChange={(event) => {
+                        const next = [...batchForm.bindings];
+                        next[index] = { ...binding, regionKey: event.target.value };
+                        setBatchForm((prev) => ({ ...prev, bindings: next }));
+                      }}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                    >
+                      {regionOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">该标签下展示账号数量</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={binding.count}
+                      onChange={(event) => {
+                        const next = [...batchForm.bindings];
+                        next[index] = { ...binding, count: Number(event.target.value) || 1 };
+                        setBatchForm((prev) => ({ ...prev, bindings: next }));
+                      }}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                    />
+                  </label>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setBatchForm((prev) => ({
+                          ...prev,
+                          bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
+                        }))
+                      }
+                      className="h-[44px] rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-100"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -525,40 +573,11 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               </button>
               <button
                 type="button"
-                disabled={batchSubmitting}
-                onClick={async () => {
-                  setBatchSubmitting(true);
-                  setError(null);
-                  setMessage(null);
-                  try {
-                    const res = await fetch("/api/admin/redeem-codes", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(batchForm),
-                    });
-                    const json = (await res.json().catch(() => ({}))) as {
-                      ok?: boolean;
-                      data?: RedeemCodeItem[];
-                      message?: string;
-                    };
-                    if (!res.ok || !json.ok || !Array.isArray(json.data)) {
-                      setError(json.message ?? "生成兑换码失败");
-                      return;
-                    }
-                    setLastGeneratedCodes(json.data.map((item) => item.code));
-                    setCodes((prev) => [...json.data!, ...prev]);
-                    setRedeemPage(1);
-                    setMessage(`成功生成 ${json.data.length} 个兑换码。`);
-                  } catch {
-                    setError("网络错误，请稍后再试");
-                  } finally {
-                    setBatchSubmitting(false);
-                  }
-                }}
-                className={saveButtonClass}
+                onClick={saveRedeemBatchConfig}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <Save className="size-4" />
-                {batchSubmitting ? "保存中..." : "保存并生成兑换码"}
+                保存配置
               </button>
               {lastGeneratedCodes.length > 0 ? (
                 <button
@@ -633,6 +652,46 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
                 />
               </label>
             </div>
+
+            <div>
+              <button
+                type="button"
+                disabled={batchSubmitting}
+                onClick={async () => {
+                  setBatchSubmitting(true);
+                  setError(null);
+                  setMessage(null);
+                  try {
+                    const res = await fetch("/api/admin/redeem-codes", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(batchForm),
+                    });
+                    const json = (await res.json().catch(() => ({}))) as {
+                      ok?: boolean;
+                      data?: RedeemCodeItem[];
+                      message?: string;
+                    };
+                    if (!res.ok || !json.ok || !Array.isArray(json.data)) {
+                      setError(json.message ?? "生成兑换码失败");
+                      return;
+                    }
+                    setLastGeneratedCodes(json.data.map((item) => item.code));
+                    setCodes((prev) => [...json.data!, ...prev]);
+                    setRedeemPage(1);
+                    setMessage(`成功生成 ${json.data.length} 个兑换码。`);
+                  } catch {
+                    setError("网络错误，请稍后再试");
+                  } finally {
+                    setBatchSubmitting(false);
+                  }
+                }}
+                className={saveButtonClass}
+              >
+                <Save className="size-4" />
+                {batchSubmitting ? "生成中..." : "生成兑换码"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -648,32 +707,25 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
           ) : (
             <>
               <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
-                <div className="grid grid-cols-[1.25fr_1.7fr_0.8fr_1.4fr_auto] gap-4 border-b border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
+                <div className="grid grid-cols-[1.1fr_1.6fr_0.8fr_1fr_1.25fr_auto] gap-4 border-b border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
                   <span>创建时间</span>
                   <span>兑换码</span>
                   <span>状态</span>
+                  <span>有效时长</span>
                   <span>规则</span>
                   <span className="text-right">操作</span>
                 </div>
                 {pagedCodes.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[1.25fr_1.7fr_0.8fr_1.4fr_auto] gap-4 border-b border-slate-100 px-4 py-3 text-sm text-slate-700 last:border-b-0"
+                    className="grid grid-cols-[1.1fr_1.6fr_0.8fr_1fr_1.25fr_auto] gap-4 border-b border-slate-100 px-4 py-2.5 text-sm text-slate-700 last:border-b-0"
                   >
                     <span className="text-slate-500">{formatShanghaiTime(item.createdAt)}</span>
-                    <div className="min-w-0">
-                      <p className="truncate font-mono font-semibold text-slate-950">{item.code}</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {!item.activatedAt
-                          ? `首次兑换后开始计时（${durationText(item.durationType, item.durationValue)})`
-                          : !item.expiresAt
-                            ? "永久有效（上海时间）"
-                            : `${formatShanghaiTime(item.expiresAt)}（上海时间）`}
-                      </p>
-                    </div>
+                    <p className="truncate font-mono font-semibold text-slate-950">{item.code}</p>
                     <span className="text-sm">
                       <RedeemStatus item={item} />
                     </span>
+                    <span className="text-slate-500">{getRedeemDurationLabel(item)}</span>
                     <span className="text-slate-500">
                       {item.bindings
                         .map((binding) => {
@@ -693,7 +745,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
                             setCodes((prev) => prev.filter((entry) => entry.id !== item.id));
                           }
                         }}
-                        className="inline-flex h-[36px] items-center rounded-xl border border-rose-200 bg-white px-3 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-50"
+                        className="inline-flex h-[34px] items-center rounded-xl border border-rose-200 bg-white px-3 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-50"
                       >
                         删除
                       </button>
@@ -736,7 +788,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_22%,#ffffff_100%)]">
-      <div className="grid min-h-screen gap-6 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6 lg:py-6">
+      <div className="grid min-h-screen gap-6 px-4 py-4 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-6 lg:py-6">
         <div className="lg:sticky lg:top-0 lg:h-[calc(100vh-3rem)]">{sidebar}</div>
 
         <div className="min-w-0 space-y-5">
