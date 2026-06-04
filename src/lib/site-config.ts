@@ -13,6 +13,7 @@ export type SiteConfig = {
   appleAutoBaseUrl: string;
   appleAutoApiKey: string;
   redeemModeEnabled: boolean;
+  showCreatorContact: boolean;
   regions: ShowcaseRegionConfig[];
 };
 
@@ -27,6 +28,7 @@ const DEFAULT_CONFIG: SiteConfig = {
     process.env.APPLE_AUTO_API_KEY?.trim() ||
     "",
   redeemModeEnabled: false,
+  showCreatorContact: true,
   regions: [
     { key: "us", label: "美区 ID", tagId: 1, countryNote: "美国" },
     { key: "us_rocket", label: "美区小火箭", tagId: 6, countryNote: "美国" },
@@ -89,6 +91,11 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
       ? input.redeemModeEnabled
       : DEFAULT_CONFIG.redeemModeEnabled;
 
+  const showCreatorContact =
+    typeof input?.showCreatorContact === "boolean"
+      ? input.showCreatorContact
+      : DEFAULT_CONFIG.showCreatorContact;
+
   const rawRegions = Array.isArray(input?.regions) ? input.regions : DEFAULT_CONFIG.regions;
   const deduped = new Map<string, ShowcaseRegionConfig>();
 
@@ -106,6 +113,7 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
     appleAutoBaseUrl,
     appleAutoApiKey,
     redeemModeEnabled,
+    showCreatorContact,
     regions: regions.length > 0 ? regions : DEFAULT_CONFIG.regions,
   };
 }
@@ -115,6 +123,7 @@ type SiteConfigRow = {
   apple_auto_base_url: string | null;
   apple_auto_api_key: string | null;
   redeem_mode_enabled: boolean;
+  creator_contact_enabled: boolean;
 };
 
 type SiteRegionRow = {
@@ -124,13 +133,30 @@ type SiteRegionRow = {
   country_note: string | null;
 };
 
+let ensureSchemaPromise: Promise<void> | null = null;
+
+async function ensureSiteConfigSchema() {
+  if (!hasDatabaseConfig()) return;
+  if (!ensureSchemaPromise) {
+    ensureSchemaPromise = (async () => {
+      await query(`
+        ALTER TABLE sites
+        ADD COLUMN IF NOT EXISTS creator_contact_enabled BOOLEAN NOT NULL DEFAULT TRUE
+      `);
+    })();
+  }
+  await ensureSchemaPromise;
+}
+
 async function readDatabaseConfig(): Promise<SiteConfig | null> {
+  await ensureSiteConfigSchema();
+
   const site = await ensureCurrentSiteRecord();
   if (!site) return null;
 
   const [siteResult, regionsResult] = await Promise.all([
     query<SiteConfigRow>(
-      `SELECT purchase_url, apple_auto_base_url, apple_auto_api_key, redeem_mode_enabled
+      `SELECT purchase_url, apple_auto_base_url, apple_auto_api_key, redeem_mode_enabled, creator_contact_enabled
        FROM sites
        WHERE id = $1
        LIMIT 1`,
@@ -153,6 +179,7 @@ async function readDatabaseConfig(): Promise<SiteConfig | null> {
     appleAutoBaseUrl: siteRow.apple_auto_base_url ?? DEFAULT_CONFIG.appleAutoBaseUrl,
     appleAutoApiKey: siteRow.apple_auto_api_key ?? DEFAULT_CONFIG.appleAutoApiKey,
     redeemModeEnabled: siteRow.redeem_mode_enabled,
+    showCreatorContact: siteRow.creator_contact_enabled,
     regions: regionsResult.rows.map((row) => ({
       key: row.region_key,
       label: row.region_label,
@@ -163,6 +190,8 @@ async function readDatabaseConfig(): Promise<SiteConfig | null> {
 }
 
 async function writeDatabaseConfig(config: SiteConfig) {
+  await ensureSiteConfigSchema();
+
   const site = await ensureCurrentSiteRecord();
   if (!site) {
     throw new Error("Current site record is unavailable");
@@ -177,6 +206,7 @@ async function writeDatabaseConfig(config: SiteConfig) {
            apple_auto_base_url = $3,
            apple_auto_api_key = $4,
            redeem_mode_enabled = $5,
+           creator_contact_enabled = $6,
            updated_at = NOW()
        WHERE id = $1`,
       [
@@ -185,6 +215,7 @@ async function writeDatabaseConfig(config: SiteConfig) {
         normalized.appleAutoBaseUrl,
         normalized.appleAutoApiKey,
         normalized.redeemModeEnabled,
+        normalized.showCreatorContact,
       ]
     );
 

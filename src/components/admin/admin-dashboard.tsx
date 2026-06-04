@@ -31,17 +31,22 @@ type RedeemBatchForm = {
   bindings: RedeemBindingDraft[];
 };
 
-const TAB_ITEMS: Array<{ key: AdminTab; label: string; description: string; icon: typeof LayoutDashboard }> = [
+const TAB_ITEMS: Array<{
+  key: AdminTab;
+  label: string;
+  description: string;
+  icon: typeof LayoutDashboard;
+}> = [
   {
     key: "overview",
     label: "总览",
-    description: "购买链接、托管接口、兑换模式",
+    description: "购买链接、托管接口、显示开关",
     icon: LayoutDashboard,
   },
   {
     key: "regions",
     label: "分类标签配置",
-    description: "前台分类名称、标签 ID、国家备注",
+    description: "前台分类名、标签 ID、国家备注",
     icon: Tags,
   },
   {
@@ -70,6 +75,31 @@ function createRegionDraft(index: number): ShowcaseRegionConfig {
     tagId: null,
     countryNote: "新地区",
   };
+}
+
+function SectionCard({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[28px] border border-slate-200/80 bg-white px-6 py-6 shadow-[0_10px_40px_rgba(148,163,184,0.12)]">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-[1.75rem] font-extrabold tracking-tight text-slate-950">{title}</h2>
+          {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{description}</p> : null}
+        </div>
+        {actions}
+      </div>
+      <div className="mt-6">{children}</div>
+    </section>
+  );
 }
 
 export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig }) {
@@ -136,17 +166,20 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
     }
   }
 
+  const saveButtonClass =
+    "inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.22)] transition hover:from-indigo-600 hover:via-violet-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60";
+
   const sidebar = (
-    <aside className="rounded-[28px] border border-slate-200/90 bg-white/95 p-3 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-      <div className="rounded-[22px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 px-4 py-5 text-white shadow-[0_14px_32px_rgba(99,102,241,0.25)]">
-        <p className="text-sm font-medium text-white/80">后台导航</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">ShareID 后台</h1>
+    <aside className="flex h-full flex-col rounded-[32px] border border-slate-200/80 bg-white p-4 shadow-[0_10px_40px_rgba(148,163,184,0.12)]">
+      <div className="rounded-[28px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 px-5 py-6 text-white shadow-[0_18px_40px_rgba(99,102,241,0.28)]">
+        <p className="text-sm font-semibold text-white/80">后台导航</p>
+        <h1 className="mt-2 text-[2.1rem] font-extrabold tracking-tight">ShareID 后台</h1>
         <p className="mt-3 text-sm leading-6 text-white/85">
-          左侧切换分类，右侧独立编辑内容。每一页都有自己的保存或提交入口。
+          左侧切换分类，右侧全屏编辑内容。每一页都有独立的保存入口。
         </p>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <nav className="mt-5 space-y-3">
         {TAB_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.key;
@@ -156,30 +189,30 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               type="button"
               onClick={() => setActiveTab(item.key)}
               className={[
-                "flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition",
+                "flex w-full items-start gap-3 rounded-[22px] border px-4 py-4 text-left transition",
                 active
-                  ? "bg-slate-900 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
-                  : "bg-white text-slate-700 hover:bg-slate-50",
+                  ? "border-slate-900 bg-slate-900 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:bg-indigo-50/40",
               ].join(" ")}
             >
               <span
                 className={[
-                  "mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl",
-                  active ? "bg-white/15 text-white" : "bg-indigo-50 text-indigo-600",
+                  "mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl",
+                  active ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600",
                 ].join(" ")}
               >
                 <Icon className="size-5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-bold">{item.label}</span>
-                <span className={["mt-1 block text-xs leading-5", active ? "text-white/75" : "text-slate-500"].join(" ")}>
+                <span className="block text-base font-bold">{item.label}</span>
+                <span className={["mt-1 block text-sm leading-6", active ? "text-white/75" : "text-slate-500"].join(" ")}>
                   {item.description}
                 </span>
               </span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
       <button
         type="button"
@@ -187,7 +220,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
           await fetch("/api/admin/logout", { method: "POST" });
           window.location.reload();
         }}
-        className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        className="mt-auto rounded-[22px] border border-slate-200 bg-white px-4 py-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
       >
         退出后台
       </button>
@@ -195,106 +228,120 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
   );
 
   const renderOverview = () => (
-    <section className="space-y-6">
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900">总览</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              统一管理购买链接、当前站点的托管接口，以及是否开启兑换模式。
-            </p>
-          </div>
+    <div className="space-y-6">
+      <SectionCard
+        title="总览"
+        description="统一管理购买链接、当前站点的托管接口，以及页面显示开关。"
+        actions={
           <button
             type="button"
             disabled={savingTab === "overview"}
             onClick={() => void saveConfigSection("overview", "总览配置已保存。")}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)] transition hover:from-indigo-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className={saveButtonClass}
           >
             <Save className="size-4" />
             {savingTab === "overview" ? "保存中..." : "保存总览"}
           </button>
-        </div>
-      </div>
-
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">兑换模式</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              开启后，前台右侧账号区会切换成兑换码模式。当前建议只给 pcyid 单独开启。
-            </p>
+        }
+      >
+        <div className="space-y-5">
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-slate-950">兑换模式</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  开启后，前台右侧账号区会切换成兑换码模式。当前建议只给 pcyid 单独开启。
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <span>{config.redeemModeEnabled ? "已开启" : "未开启"}</span>
+                <input
+                  type="checkbox"
+                  checked={config.redeemModeEnabled}
+                  onChange={(event) =>
+                    setConfig((prev) => ({ ...prev, redeemModeEnabled: event.target.checked }))
+                  }
+                  className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+            </div>
           </div>
-          <label className="inline-flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <span>{config.redeemModeEnabled ? "已开启" : "未开启"}</span>
-            <input
-              type="checkbox"
-              checked={config.redeemModeEnabled}
-              onChange={(event) =>
-                setConfig((prev) => ({ ...prev, redeemModeEnabled: event.target.checked }))
-              }
-              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            />
-          </label>
-        </div>
-      </div>
 
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <h3 className="text-xl font-bold text-slate-900">购买链接</h3>
-        <p className="mt-2 text-sm text-slate-500">前台所有“点我购买独享ID”都会统一使用这个地址。</p>
-        <input
-          value={config.purchaseUrl}
-          onChange={(event) =>
-            setConfig((prev) => ({ ...prev, purchaseUrl: event.target.value }))
-          }
-          className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
-          placeholder="https://example.com/"
-        />
-      </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-slate-950">底部联系方式</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  控制前台最底部“分享页制作联系Q：3668514531”是否显示。
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <span>{config.showCreatorContact ? "显示中" : "已隐藏"}</span>
+                <input
+                  type="checkbox"
+                  checked={config.showCreatorContact}
+                  onChange={(event) =>
+                    setConfig((prev) => ({ ...prev, showCreatorContact: event.target.checked }))
+                  }
+                  className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+            </div>
+          </div>
 
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <h3 className="text-xl font-bold text-slate-900">托管接口配置</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          这里可以直接为当前站点设置 AppleAuto 的 Base URL 和 API Key。不填写时会回退到服务器
-          `.env` 里的配置。
-        </p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">Base URL</span>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+            <h3 className="text-xl font-bold text-slate-950">购买链接</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">前台所有“点我购买独享ID”都会统一使用这个地址。</p>
             <input
-              value={config.appleAutoBaseUrl}
-              onChange={(event) =>
-                setConfig((prev) => ({ ...prev, appleAutoBaseUrl: event.target.value }))
-              }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
-              placeholder="https://your-host.example.com"
+              value={config.purchaseUrl}
+              onChange={(event) => setConfig((prev) => ({ ...prev, purchaseUrl: event.target.value }))}
+              className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+              placeholder="https://example.com/"
             />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">API Key</span>
-            <input
-              value={config.appleAutoApiKey}
-              onChange={(event) =>
-                setConfig((prev) => ({ ...prev, appleAutoApiKey: event.target.value }))
-              }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-200"
-              placeholder="replace-with-api-key"
-            />
-          </label>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+            <h3 className="text-xl font-bold text-slate-950">托管接口配置</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              这里可以直接为当前站点设置 AppleAuto 的 Base URL 和 API Key。不填写时会回退到服务器 `.env`
+              里的配置。
+            </p>
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">Base URL</span>
+                <input
+                  value={config.appleAutoBaseUrl}
+                  onChange={(event) =>
+                    setConfig((prev) => ({ ...prev, appleAutoBaseUrl: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  placeholder="https://your-host.example.com"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">API Key</span>
+                <input
+                  value={config.appleAutoApiKey}
+                  onChange={(event) =>
+                    setConfig((prev) => ({ ...prev, appleAutoApiKey: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  placeholder="replace-with-api-key"
+                />
+              </label>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </SectionCard>
+    </div>
   );
 
   const renderRegions = () => (
-    <section className="space-y-6">
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900">分类标签配置</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              分类 key 为系统内部字段，这里不再单独编辑。你只需要维护前台名称、标签 ID 和国家备注。
-            </p>
-          </div>
+    <div className="space-y-6">
+      <SectionCard
+        title="分类标签配置"
+        description="分类 key 由系统内部维护。这里只编辑前台分类名、标签 ID 和国家备注。"
+        actions={
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
@@ -313,103 +360,99 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               type="button"
               disabled={savingTab === "regions"}
               onClick={() => void saveConfigSection("regions", "分类标签配置已保存。")}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)] transition hover:from-indigo-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className={saveButtonClass}
             >
               <Save className="size-4" />
               {savingTab === "regions" ? "保存中..." : "保存分类标签"}
             </button>
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {config.regions.map((region, index) => (
-          <div
-            key={`${region.key}-${index}`}
-            className="rounded-[28px] border border-slate-200/90 bg-white/95 p-5 shadow-[0_16px_44px_rgba(79,70,229,0.08)] ring-1 ring-slate-200/60 backdrop-blur"
-          >
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-500">分类 {index + 1}</p>
-                <p className="mt-1 text-xs text-slate-400">系统 key：{region.key}</p>
+        }
+      >
+        <div className="space-y-4">
+          {config.regions.map((region, index) => (
+            <div
+              key={`${region.key}-${index}`}
+              className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
+            >
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">分类 {index + 1}</p>
+                  <p className="mt-1 text-xs text-slate-400">系统 key：{region.key}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      regions: prev.regions.filter((_, itemIndex) => itemIndex !== index),
+                    }))
+                  }
+                  className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
+                  aria-label={`删除分类 ${region.label}`}
+                >
+                  <Trash2 className="size-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    regions: prev.regions.filter((_, itemIndex) => itemIndex !== index),
-                  }))
-                }
-                className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
-                aria-label={`删除分类 ${region.label}`}
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-700">分类名称</span>
-                <input
-                  value={region.label}
-                  onChange={(event) => {
-                    const next = [...config.regions];
-                    next[index] = { ...region, label: event.target.value };
-                    setConfig((prev) => ({ ...prev, regions: next }));
-                  }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                  placeholder="美区 ID"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-700">标签 ID</span>
-                <input
-                  value={region.tagId ?? ""}
-                  onChange={(event) => {
-                    const next = [...config.regions];
-                    next[index] = {
-                      ...region,
-                      tagId: event.target.value === "" ? null : Number(event.target.value),
-                    };
-                    setConfig((prev) => ({ ...prev, regions: next }));
-                  }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                  placeholder="1"
-                  inputMode="numeric"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-700">国家备注</span>
-                <input
-                  value={region.countryNote}
-                  onChange={(event) => {
-                    const next = [...config.regions];
-                    next[index] = { ...region, countryNote: event.target.value };
-                    setConfig((prev) => ({ ...prev, regions: next }));
-                  }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                  placeholder="美国"
-                />
-              </label>
+              <div className="grid gap-4 xl:grid-cols-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">分类名称</span>
+                  <input
+                    value={region.label}
+                    onChange={(event) => {
+                      const next = [...config.regions];
+                      next[index] = { ...region, label: event.target.value };
+                      setConfig((prev) => ({ ...prev, regions: next }));
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                    placeholder="美区 ID"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">标签 ID</span>
+                  <input
+                    value={region.tagId ?? ""}
+                    onChange={(event) => {
+                      const next = [...config.regions];
+                      next[index] = {
+                        ...region,
+                        tagId: event.target.value === "" ? null : Number(event.target.value),
+                      };
+                      setConfig((prev) => ({ ...prev, regions: next }));
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                    placeholder="1"
+                    inputMode="numeric"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">国家备注</span>
+                  <input
+                    value={region.countryNote}
+                    onChange={(event) => {
+                      const next = [...config.regions];
+                      next[index] = { ...region, countryNote: event.target.value };
+                      setConfig((prev) => ({ ...prev, regions: next }));
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                    placeholder="美国"
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </section>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
   );
 
   const renderRedeem = () => (
-    <section className="space-y-6">
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900">兑换码管理</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              支持批量生成、首次兑换后开始计时，并且统一按上海时间展示状态和到期时间。
-            </p>
-          </div>
-          {lastGeneratedCodes.length > 0 ? (
+    <div className="space-y-6">
+      <SectionCard
+        title="兑换码管理"
+        description="支持批量生成、首次兑换后开始计时，并按上海时间显示状态和失效时间。"
+        actions={
+          lastGeneratedCodes.length > 0 ? (
             <button
               type="button"
               onClick={async () => {
@@ -422,288 +465,285 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               <Copy className="size-4" />
               复制本次生成兑换码
             </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_20px_60px_rgba(79,70,229,0.12)] ring-1 ring-slate-200/60 backdrop-blur">
-        <div className="grid gap-4 md:grid-cols-5">
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">生成数量</span>
-            <input
-              type="number"
-              min={1}
-              value={batchForm.quantity}
-              onChange={(event) =>
-                setBatchForm((prev) => ({ ...prev, quantity: Number(event.target.value) || 1 }))
-              }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">前缀</span>
-            <input
-              value={batchForm.prefix}
-              onChange={(event) => setBatchForm((prev) => ({ ...prev, prefix: event.target.value }))}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-              placeholder="PCY"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">有效期类型</span>
-            <select
-              value={batchForm.durationType}
-              onChange={(event) =>
-                setBatchForm((prev) => ({
-                  ...prev,
-                  durationType: event.target.value as RedeemBatchForm["durationType"],
-                }))
-              }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="day">天</option>
-              <option value="month">月</option>
-              <option value="year">年</option>
-              <option value="forever">永久</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">时长数值</span>
-            <input
-              type="number"
-              min={1}
-              disabled={batchForm.durationType === "forever"}
-              value={batchForm.durationValue}
-              onChange={(event) =>
-                setBatchForm((prev) => ({
-                  ...prev,
-                  durationValue: Number(event.target.value) || 1,
-                }))
-              }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">备注</span>
-            <input
-              value={batchForm.note}
-              onChange={(event) => setBatchForm((prev) => ({ ...prev, note: event.target.value }))}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-              placeholder="可选"
-            />
-          </label>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {batchForm.bindings.map((binding, index) => (
-            <div key={`${binding.regionKey}-${index}`} className="grid gap-3 md:grid-cols-[1.4fr_0.9fr_auto]">
-              <select
-                value={binding.regionKey}
-                onChange={(event) => {
-                  const next = [...batchForm.bindings];
-                  next[index] = { ...binding, regionKey: event.target.value };
-                  setBatchForm((prev) => ({ ...prev, bindings: next }));
-                }}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-              >
-                {regionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+          ) : null
+        }
+      >
+        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+          <div className="grid gap-4 xl:grid-cols-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">生成数量</span>
               <input
                 type="number"
                 min={1}
-                value={binding.count}
-                onChange={(event) => {
-                  const next = [...batchForm.bindings];
-                  next[index] = { ...binding, count: Number(event.target.value) || 1 };
-                  setBatchForm((prev) => ({ ...prev, bindings: next }));
-                }}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                value={batchForm.quantity}
+                onChange={(event) =>
+                  setBatchForm((prev) => ({ ...prev, quantity: Number(event.target.value) || 1 }))
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               />
-              <button
-                type="button"
-                onClick={() =>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">前缀</span>
+              <input
+                value={batchForm.prefix}
+                onChange={(event) => setBatchForm((prev) => ({ ...prev, prefix: event.target.value }))}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                placeholder="PCY"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">有效期类型</span>
+              <select
+                value={batchForm.durationType}
+                onChange={(event) =>
                   setBatchForm((prev) => ({
                     ...prev,
-                    bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
+                    durationType: event.target.value as RedeemBatchForm["durationType"],
                   }))
                 }
-                className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               >
-                删除
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() =>
-              setBatchForm((prev) => ({
-                ...prev,
-                bindings: [...prev.bindings, { regionKey: config.regions[0]?.key ?? "us", count: 1 }],
-              }))
-            }
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            新增标签绑定
-          </button>
-          <button
-            type="button"
-            disabled={batchSubmitting}
-            onClick={async () => {
-              setBatchSubmitting(true);
-              setError(null);
-              setMessage(null);
-              try {
-                const res = await fetch("/api/admin/redeem-codes", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(batchForm),
-                });
-                const json = (await res.json().catch(() => ({}))) as {
-                  ok?: boolean;
-                  data?: RedeemCodeItem[];
-                  message?: string;
-                };
-                if (!res.ok || !json.ok || !Array.isArray(json.data)) {
-                  setError(json.message ?? "生成兑换码失败");
-                  return;
+                <option value="day">天</option>
+                <option value="month">月</option>
+                <option value="year">年</option>
+                <option value="forever">永久</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">时长数值</span>
+              <input
+                type="number"
+                min={1}
+                disabled={batchForm.durationType === "forever"}
+                value={batchForm.durationValue}
+                onChange={(event) =>
+                  setBatchForm((prev) => ({
+                    ...prev,
+                    durationValue: Number(event.target.value) || 1,
+                  }))
                 }
-                setLastGeneratedCodes(json.data.map((item) => item.code));
-                setCodes((prev) => [...json.data!, ...prev]);
-                setMessage(`成功生成 ${json.data.length} 个兑换码。`);
-              } catch {
-                setError("网络错误，请稍后再试");
-              } finally {
-                setBatchSubmitting(false);
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)] transition hover:from-indigo-600 hover:to-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Save className="size-4" />
-            {batchSubmitting ? "保存中..." : "保存并生成兑换码"}
-          </button>
-        </div>
-      </div>
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">备注</span>
+              <input
+                value={batchForm.note}
+                onChange={(event) => setBatchForm((prev) => ({ ...prev, note: event.target.value }))}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                placeholder="可选"
+              />
+            </label>
+          </div>
 
-      <div className="space-y-3">
-        {codesLoading ? (
-          <p className="rounded-[28px] border border-slate-200/90 bg-white/95 px-5 py-6 text-sm text-slate-500 shadow-[0_16px_44px_rgba(79,70,229,0.08)]">
-            正在加载兑换码...
-          </p>
-        ) : codes.length === 0 ? (
-          <p className="rounded-[28px] border border-dashed border-slate-300 bg-white/90 px-5 py-8 text-sm text-slate-500">
-            暂无兑换码。
-          </p>
-        ) : (
-          codes.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-[28px] border border-slate-200/90 bg-white/95 p-5 shadow-[0_16px_44px_rgba(79,70,229,0.08)] ring-1 ring-slate-200/60 backdrop-blur"
+          <div className="mt-4 space-y-3">
+            {batchForm.bindings.map((binding, index) => (
+              <div key={`${binding.regionKey}-${index}`} className="grid gap-3 xl:grid-cols-[1.5fr_1fr_auto]">
+                <select
+                  value={binding.regionKey}
+                  onChange={(event) => {
+                    const next = [...batchForm.bindings];
+                    next[index] = { ...binding, regionKey: event.target.value };
+                    setBatchForm((prev) => ({ ...prev, bindings: next }));
+                  }}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                >
+                  {regionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  value={binding.count}
+                  onChange={(event) => {
+                    const next = [...batchForm.bindings];
+                    next[index] = { ...binding, count: Number(event.target.value) || 1 };
+                    setBatchForm((prev) => ({ ...prev, bindings: next }));
+                  }}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setBatchForm((prev) => ({
+                      ...prev,
+                      bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
+                    }))
+                  }
+                  className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
+                >
+                  删除
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                setBatchForm((prev) => ({
+                  ...prev,
+                  bindings: [...prev.bindings, { regionKey: config.regions[0]?.key ?? "us", count: 1 }],
+                }))
+              }
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="font-mono text-lg font-bold text-slate-900">{item.code}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    创建时间：{formatShanghaiTime(item.createdAt)}（上海时间）
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    状态：<RedeemStatus item={item} />
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    规则：
-                    {item.bindings
-                      .map((binding) => {
-                        const region = config.regions.find((entry) => entry.key === binding.regionKey);
-                        return `${region?.label ?? binding.regionKey} × ${binding.count}`;
-                      })
-                      .join("，")}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    有效期：
-                    {!item.activatedAt
-                      ? `首次兑换后开始计时（${durationText(item.durationType, item.durationValue)})`
-                      : !item.expiresAt
-                        ? "永久有效（上海时间）"
-                        : `${formatShanghaiTime(item.expiresAt)}（上海时间）`}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(item.code);
-                      setMessage(`已复制兑换码 ${item.code}`);
-                      setError(null);
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    复制
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ enabled: !item.enabled }),
-                      });
-                      const json = (await res.json().catch(() => ({}))) as { data?: RedeemCodeItem };
-                      if (res.ok && json.data) {
-                        setCodes((prev) => prev.map((entry) => (entry.id === item.id ? json.data! : entry)));
-                      }
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    {item.enabled ? "禁用" : "启用"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
-                        method: "DELETE",
-                      });
-                      if (res.ok) {
-                        setCodes((prev) => prev.filter((entry) => entry.id !== item.id));
-                      }
-                    }}
-                    className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
-                  >
-                    删除
-                  </button>
+              新增标签绑定
+            </button>
+            <button
+              type="button"
+              disabled={batchSubmitting}
+              onClick={async () => {
+                setBatchSubmitting(true);
+                setError(null);
+                setMessage(null);
+                try {
+                  const res = await fetch("/api/admin/redeem-codes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(batchForm),
+                  });
+                  const json = (await res.json().catch(() => ({}))) as {
+                    ok?: boolean;
+                    data?: RedeemCodeItem[];
+                    message?: string;
+                  };
+                  if (!res.ok || !json.ok || !Array.isArray(json.data)) {
+                    setError(json.message ?? "生成兑换码失败");
+                    return;
+                  }
+                  setLastGeneratedCodes(json.data.map((item) => item.code));
+                  setCodes((prev) => [...json.data!, ...prev]);
+                  setMessage(`成功生成 ${json.data.length} 个兑换码。`);
+                } catch {
+                  setError("网络错误，请稍后再试");
+                } finally {
+                  setBatchSubmitting(false);
+                }
+              }}
+              className={saveButtonClass}
+            >
+              <Save className="size-4" />
+              {batchSubmitting ? "保存中..." : "保存并生成兑换码"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {codesLoading ? (
+            <p className="rounded-[24px] border border-slate-200 bg-white px-5 py-6 text-sm text-slate-500">
+              正在加载兑换码...
+            </p>
+          ) : codes.length === 0 ? (
+            <p className="rounded-[24px] border border-dashed border-slate-300 bg-white px-5 py-8 text-sm text-slate-500">
+              暂无兑换码。
+            </p>
+          ) : (
+            codes.map((item) => (
+              <div key={item.id} className="rounded-[24px] border border-slate-200 bg-white px-5 py-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-mono text-lg font-bold text-slate-950">{item.code}</p>
+                    <p className="mt-1 text-sm text-slate-500">创建时间：{formatShanghaiTime(item.createdAt)}（上海时间）</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      状态：<RedeemStatus item={item} />
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      规则：
+                      {item.bindings
+                        .map((binding) => {
+                          const region = config.regions.find((entry) => entry.key === binding.regionKey);
+                          return `${region?.label ?? binding.regionKey} × ${binding.count}`;
+                        })
+                        .join("，")}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      有效期：
+                      {!item.activatedAt
+                        ? `首次兑换后开始计时（${durationText(item.durationType, item.durationValue)})`
+                        : !item.expiresAt
+                          ? "永久有效（上海时间）"
+                          : `${formatShanghaiTime(item.expiresAt)}（上海时间）`}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(item.code);
+                        setMessage(`已复制兑换码 ${item.code}`);
+                        setError(null);
+                      }}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      复制
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ enabled: !item.enabled }),
+                        });
+                        const json = (await res.json().catch(() => ({}))) as { data?: RedeemCodeItem };
+                        if (res.ok && json.data) {
+                          setCodes((prev) => prev.map((entry) => (entry.id === item.id ? json.data! : entry)));
+                        }
+                      }}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {item.enabled ? "禁用" : "启用"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
+                          method: "DELETE",
+                        });
+                        if (res.ok) {
+                          setCodes((prev) => prev.filter((entry) => entry.id !== item.id));
+                        }
+                      }}
+                      className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
+            ))
+          )}
+        </div>
+      </SectionCard>
+    </div>
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <div className="lg:sticky lg:top-6 lg:self-start">{sidebar}</div>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_22%,#ffffff_100%)]">
+      <div className="grid min-h-screen gap-6 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6 lg:py-6">
+        <div className="lg:sticky lg:top-0 lg:h-[calc(100vh-3rem)]">{sidebar}</div>
 
-      <div className="space-y-5">
-        {message ? (
-          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {message}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {error}
-          </p>
-        ) : null}
+        <div className="min-w-0 space-y-5">
+          {message ? (
+            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {message}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </p>
+          ) : null}
 
-        {activeTab === "overview" ? renderOverview() : null}
-        {activeTab === "regions" ? renderRegions() : null}
-        {activeTab === "redeem" ? renderRedeem() : null}
+          {activeTab === "overview" ? renderOverview() : null}
+          {activeTab === "regions" ? renderRegions() : null}
+          {activeTab === "redeem" ? renderRedeem() : null}
+        </div>
       </div>
     </div>
   );

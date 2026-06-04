@@ -19,17 +19,17 @@ export default async function AdminPage() {
   return (
     <main
       className={cn(
-        "min-h-screen bg-[radial-gradient(circle_at_top,#eef2ff_0%,#f8fafc_55%,#ffffff_100%)] px-4 py-8 sm:px-6",
+        "min-h-screen bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_22%,#ffffff_100%)]",
         "text-slate-900"
       )}
     >
-      <div className="mx-auto w-full max-w-5xl">
-        {loggedIn ? (
-          <AdminDashboard initialConfig={await getSiteConfig()} />
-        ) : (
+      {loggedIn ? (
+        <AdminDashboard initialConfig={await getSiteConfig()} />
+      ) : (
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
           <AdminLogin usingDefaultPassword={isUsingDefaultAdminPassword()} />
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }
