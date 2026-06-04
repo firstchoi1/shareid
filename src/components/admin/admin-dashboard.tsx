@@ -422,27 +422,11 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               key={`${region.key}-${index}`}
               className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5"
             >
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div>
+              <div className="grid gap-4 xl:grid-cols-[180px_minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_auto] xl:items-end">
+                <div className="xl:pb-3">
                   <p className="text-sm font-semibold text-slate-500">分类 {index + 1}</p>
                   <p className="mt-1 text-xs text-slate-400">系统 key：{region.key}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      regions: prev.regions.filter((_, itemIndex) => itemIndex !== index),
-                    }))
-                  }
-                  className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
-                  aria-label={`删除分类 ${region.label}`}
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-3">
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-slate-700">分类名称</span>
                   <input
@@ -486,6 +470,19 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
                     placeholder="美国"
                   />
                 </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      regions: prev.regions.filter((_, itemIndex) => itemIndex !== index),
+                    }))
+                  }
+                  className="inline-flex h-[46px] items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-rose-600 transition hover:bg-rose-100"
+                  aria-label={`删除分类 ${region.label}`}
+                >
+                  <Trash2 className="size-4" />
+                </button>
               </div>
             </div>
           ))}
