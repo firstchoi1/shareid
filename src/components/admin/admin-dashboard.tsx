@@ -112,6 +112,7 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
   const [codesLoading, setCodesLoading] = useState(true);
   const [lastGeneratedCodes, setLastGeneratedCodes] = useState<string[]>([]);
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [redeemPage, setRedeemPage] = useState(1);
   const [batchForm, setBatchForm] = useState<RedeemBatchForm>({
     quantity: 10,
     prefix: "",
@@ -124,6 +125,12 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
   const regionOptions = useMemo(
     () => config.regions.map((region) => ({ value: region.key, label: region.label })),
     [config.regions]
+  );
+  const redeemPageSize = 30;
+  const redeemPageCount = Math.max(1, Math.ceil(codes.length / redeemPageSize));
+  const pagedCodes = useMemo(
+    () => codes.slice((redeemPage - 1) * redeemPageSize, redeemPage * redeemPageSize),
+    [codes, redeemPage]
   );
 
   useEffect(() => {
@@ -451,185 +458,181 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
       <SectionCard
         title="兑换码管理"
         description="支持批量生成、首次兑换后开始计时，并按上海时间显示状态和失效时间。"
-        actions={
-          lastGeneratedCodes.length > 0 ? (
-            <button
-              type="button"
-              onClick={async () => {
-                await navigator.clipboard.writeText(lastGeneratedCodes.join("\n"));
-                setMessage("已复制本次生成的兑换码。");
-                setError(null);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <Copy className="size-4" />
-              复制本次生成兑换码
-            </button>
-          ) : null
-        }
+        actions={null}
       >
         <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
-          <div className="grid gap-4 xl:grid-cols-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">生成数量</span>
-              <input
-                type="number"
-                min={1}
-                value={batchForm.quantity}
-                onChange={(event) =>
-                  setBatchForm((prev) => ({ ...prev, quantity: Number(event.target.value) || 1 }))
-                }
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">前缀</span>
-              <input
-                value={batchForm.prefix}
-                onChange={(event) => setBatchForm((prev) => ({ ...prev, prefix: event.target.value }))}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                placeholder="PCY"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">有效期类型</span>
-              <select
-                value={batchForm.durationType}
-                onChange={(event) =>
-                  setBatchForm((prev) => ({
-                    ...prev,
-                    durationType: event.target.value as RedeemBatchForm["durationType"],
-                  }))
-                }
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-              >
-                <option value="day">天</option>
-                <option value="month">月</option>
-                <option value="year">年</option>
-                <option value="forever">永久</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">时长数值</span>
-              <input
-                type="number"
-                min={1}
-                disabled={batchForm.durationType === "forever"}
-                value={batchForm.durationValue}
-                onChange={(event) =>
-                  setBatchForm((prev) => ({
-                    ...prev,
-                    durationValue: Number(event.target.value) || 1,
-                  }))
-                }
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">备注</span>
-              <input
-                value={batchForm.note}
-                onChange={(event) => setBatchForm((prev) => ({ ...prev, note: event.target.value }))}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
-                placeholder="可选"
-              />
-            </label>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {batchForm.bindings.map((binding, index) => (
-              <div key={`${binding.regionKey}-${index}`} className="grid gap-3 xl:grid-cols-[1.5fr_1fr_auto]">
-                <select
-                  value={binding.regionKey}
-                  onChange={(event) => {
-                    const next = [...batchForm.bindings];
-                    next[index] = { ...binding, regionKey: event.target.value };
-                    setBatchForm((prev) => ({ ...prev, bindings: next }));
-                  }}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {batchForm.bindings.map((binding, index) => (
+                <div
+                  key={`${binding.regionKey}-${index}`}
+                  className="grid gap-3 xl:grid-cols-[1.45fr_0.9fr_auto]"
                 >
-                  {regionOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <select
+                    value={binding.regionKey}
+                    onChange={(event) => {
+                      const next = [...batchForm.bindings];
+                      next[index] = { ...binding, regionKey: event.target.value };
+                      setBatchForm((prev) => ({ ...prev, bindings: next }));
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  >
+                    {regionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={1}
+                    value={binding.count}
+                    onChange={(event) => {
+                      const next = [...batchForm.bindings];
+                      next[index] = { ...binding, count: Number(event.target.value) || 1 };
+                      setBatchForm((prev) => ({ ...prev, bindings: next }));
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBatchForm((prev) => ({
+                        ...prev,
+                        bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
+                      }))
+                    }
+                    className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-100"
+                  >
+                    删除
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setBatchForm((prev) => ({
+                    ...prev,
+                    bindings: [...prev.bindings, { regionKey: config.regions[0]?.key ?? "us", count: 1 }],
+                  }))
+                }
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                新增标签绑定
+              </button>
+              <button
+                type="button"
+                disabled={batchSubmitting}
+                onClick={async () => {
+                  setBatchSubmitting(true);
+                  setError(null);
+                  setMessage(null);
+                  try {
+                    const res = await fetch("/api/admin/redeem-codes", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(batchForm),
+                    });
+                    const json = (await res.json().catch(() => ({}))) as {
+                      ok?: boolean;
+                      data?: RedeemCodeItem[];
+                      message?: string;
+                    };
+                    if (!res.ok || !json.ok || !Array.isArray(json.data)) {
+                      setError(json.message ?? "生成兑换码失败");
+                      return;
+                    }
+                    setLastGeneratedCodes(json.data.map((item) => item.code));
+                    setCodes((prev) => [...json.data!, ...prev]);
+                    setRedeemPage(1);
+                    setMessage(`成功生成 ${json.data.length} 个兑换码。`);
+                  } catch {
+                    setError("网络错误，请稍后再试");
+                  } finally {
+                    setBatchSubmitting(false);
+                  }
+                }}
+                className={saveButtonClass}
+              >
+                <Save className="size-4" />
+                {batchSubmitting ? "保存中..." : "保存并生成兑换码"}
+              </button>
+              {lastGeneratedCodes.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(lastGeneratedCodes.join("\n"));
+                    setMessage("已复制本次生成的兑换码。");
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Copy className="size-4" />
+                  复制本次生成兑换码
+                </button>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[0.8fr_0.8fr_0.8fr_1fr]">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">生成数量</span>
                 <input
                   type="number"
                   min={1}
-                  value={binding.count}
-                  onChange={(event) => {
-                    const next = [...batchForm.bindings];
-                    next[index] = { ...binding, count: Number(event.target.value) || 1 };
-                    setBatchForm((prev) => ({ ...prev, bindings: next }));
-                  }}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  value={batchForm.quantity}
+                  onChange={(event) =>
+                    setBatchForm((prev) => ({ ...prev, quantity: Number(event.target.value) || 1 }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                 />
-                <button
-                  type="button"
-                  onClick={() =>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">时长数值</span>
+                <input
+                  type="number"
+                  min={1}
+                  disabled={batchForm.durationType === "forever"}
+                  value={batchForm.durationValue}
+                  onChange={(event) =>
                     setBatchForm((prev) => ({
                       ...prev,
-                      bindings: prev.bindings.filter((_, itemIndex) => itemIndex !== index),
+                      durationValue: Number(event.target.value) || 1,
                     }))
                   }
-                  className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600 transition hover:bg-rose-100"
-                >
-                  删除
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                setBatchForm((prev) => ({
-                  ...prev,
-                  bindings: [...prev.bindings, { regionKey: config.regions[0]?.key ?? "us", count: 1 }],
-                }))
-              }
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              新增标签绑定
-            </button>
-            <button
-              type="button"
-              disabled={batchSubmitting}
-              onClick={async () => {
-                setBatchSubmitting(true);
-                setError(null);
-                setMessage(null);
-                try {
-                  const res = await fetch("/api/admin/redeem-codes", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(batchForm),
-                  });
-                  const json = (await res.json().catch(() => ({}))) as {
-                    ok?: boolean;
-                    data?: RedeemCodeItem[];
-                    message?: string;
-                  };
-                  if (!res.ok || !json.ok || !Array.isArray(json.data)) {
-                    setError(json.message ?? "生成兑换码失败");
-                    return;
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">有效期类型</span>
+                <select
+                  value={batchForm.durationType}
+                  onChange={(event) =>
+                    setBatchForm((prev) => ({
+                      ...prev,
+                      durationType: event.target.value as RedeemBatchForm["durationType"],
+                    }))
                   }
-                  setLastGeneratedCodes(json.data.map((item) => item.code));
-                  setCodes((prev) => [...json.data!, ...prev]);
-                  setMessage(`成功生成 ${json.data.length} 个兑换码。`);
-                } catch {
-                  setError("网络错误，请稍后再试");
-                } finally {
-                  setBatchSubmitting(false);
-                }
-              }}
-              className={saveButtonClass}
-            >
-              <Save className="size-4" />
-              {batchSubmitting ? "保存中..." : "保存并生成兑换码"}
-            </button>
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                >
+                  <option value="day">天</option>
+                  <option value="month">月</option>
+                  <option value="year">年</option>
+                  <option value="forever">永久</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">备注</span>
+                <input
+                  value={batchForm.note}
+                  onChange={(event) => setBatchForm((prev) => ({ ...prev, note: event.target.value }))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  placeholder="可选"
+                />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -643,80 +646,88 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
               暂无兑换码。
             </p>
           ) : (
-            codes.map((item) => (
-              <div key={item.id} className="rounded-[24px] border border-slate-200 bg-white px-5 py-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="font-mono text-lg font-bold text-slate-950">{item.code}</p>
-                    <p className="mt-1 text-sm text-slate-500">创建时间：{formatShanghaiTime(item.createdAt)}（上海时间）</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      状态：<RedeemStatus item={item} />
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      规则：
+            <>
+              <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                <div className="grid grid-cols-[1.25fr_1.7fr_0.8fr_1.4fr_auto] gap-4 border-b border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
+                  <span>创建时间</span>
+                  <span>兑换码</span>
+                  <span>状态</span>
+                  <span>规则</span>
+                  <span className="text-right">操作</span>
+                </div>
+                {pagedCodes.map((item) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-[1.25fr_1.7fr_0.8fr_1.4fr_auto] gap-4 border-b border-slate-100 px-4 py-3 text-sm text-slate-700 last:border-b-0"
+                  >
+                    <span className="text-slate-500">{formatShanghaiTime(item.createdAt)}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-mono font-semibold text-slate-950">{item.code}</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {!item.activatedAt
+                          ? `首次兑换后开始计时（${durationText(item.durationType, item.durationValue)})`
+                          : !item.expiresAt
+                            ? "永久有效（上海时间）"
+                            : `${formatShanghaiTime(item.expiresAt)}（上海时间）`}
+                      </p>
+                    </div>
+                    <span className="text-sm">
+                      <RedeemStatus item={item} />
+                    </span>
+                    <span className="text-slate-500">
                       {item.bindings
                         .map((binding) => {
                           const region = config.regions.find((entry) => entry.key === binding.regionKey);
                           return `${region?.label ?? binding.regionKey} × ${binding.count}`;
                         })
                         .join("，")}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      有效期：
-                      {!item.activatedAt
-                        ? `首次兑换后开始计时（${durationText(item.durationType, item.durationValue)})`
-                        : !item.expiresAt
-                          ? "永久有效（上海时间）"
-                          : `${formatShanghaiTime(item.expiresAt)}（上海时间）`}
-                    </p>
+                    </span>
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
+                            method: "DELETE",
+                          });
+                          if (res.ok) {
+                            setCodes((prev) => prev.filter((entry) => entry.id !== item.id));
+                          }
+                        }}
+                        className="inline-flex h-[36px] items-center rounded-xl border border-rose-200 bg-white px-3 text-sm font-semibold leading-none text-rose-600 transition hover:bg-rose-50"
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                ))}
+              </div>
+
+              {redeemPageCount > 1 ? (
+                <div className="flex items-center justify-between gap-4 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                  <span>
+                    第 {redeemPage} / {redeemPageCount} 页，每页 30 个兑换码
+                  </span>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(item.code);
-                        setMessage(`已复制兑换码 ${item.code}`);
-                        setError(null);
-                      }}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      disabled={redeemPage <= 1}
+                      onClick={() => setRedeemPage((prev) => Math.max(1, prev - 1))}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      复制
+                      上一页
                     </button>
                     <button
                       type="button"
-                      onClick={async () => {
-                        const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ enabled: !item.enabled }),
-                        });
-                        const json = (await res.json().catch(() => ({}))) as { data?: RedeemCodeItem };
-                        if (res.ok && json.data) {
-                          setCodes((prev) => prev.map((entry) => (entry.id === item.id ? json.data! : entry)));
-                        }
-                      }}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      disabled={redeemPage >= redeemPageCount}
+                      onClick={() => setRedeemPage((prev) => Math.min(redeemPageCount, prev + 1))}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {item.enabled ? "禁用" : "启用"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const res = await fetch(`/api/admin/redeem-codes/${item.id}`, {
-                          method: "DELETE",
-                        });
-                        if (res.ok) {
-                          setCodes((prev) => prev.filter((entry) => entry.id !== item.id));
-                        }
-                      }}
-                      className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
-                    >
-                      删除
+                      下一页
                     </button>
                   </div>
                 </div>
-              </div>
-            ))
+              ) : null}
+            </>
           )}
         </div>
       </SectionCard>
