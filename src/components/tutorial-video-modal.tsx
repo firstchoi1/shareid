@@ -73,7 +73,7 @@ export function TutorialVideoModal({ purchaseUrl }: { purchaseUrl: string }) {
               一人一号。
             </p>
             <p className="text-center text-[1.2rem] font-semibold leading-8 text-red-600 sm:text-[1.2rem] sm:leading-9">
-              共享账号严禁出借给朋友使用，若因你的朋友登录设置造成锁机后果你自己承担
+              共享账号严禁借给朋友使用，若因朋友登录设置造成锁机后果自己承担
             </p>
           </div>
 
