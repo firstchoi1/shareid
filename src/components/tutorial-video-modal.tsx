@@ -3,15 +3,26 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
-const COUNTDOWN_SEC = 20;
-
-export function TutorialVideoModal({ purchaseUrl }: { purchaseUrl: string }) {
+export function TutorialVideoModal({
+  purchaseUrl,
+  countdownSeconds,
+}: {
+  purchaseUrl: string;
+  countdownSeconds: number;
+}) {
+  const initialCountdown = Math.max(0, Math.min(300, Math.floor(countdownSeconds || 0)));
   const [open, setOpen] = useState(true);
-  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SEC);
-  const [canClose, setCanClose] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
+  const [canClose, setCanClose] = useState(initialCountdown <= 0);
 
   useEffect(() => {
-    let remaining = COUNTDOWN_SEC;
+    if (initialCountdown <= 0) {
+      setSecondsLeft(0);
+      setCanClose(true);
+      return;
+    }
+
+    let remaining = initialCountdown;
     const timer = window.setInterval(() => {
       remaining -= 1;
       setSecondsLeft(remaining);
@@ -22,7 +33,7 @@ export function TutorialVideoModal({ purchaseUrl }: { purchaseUrl: string }) {
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [initialCountdown]);
 
   const handleClose = useCallback(() => {
     if (!canClose) {

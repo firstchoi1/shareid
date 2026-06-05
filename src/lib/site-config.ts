@@ -14,6 +14,7 @@ export type SiteConfig = {
   appleAutoApiKey: string;
   redeemModeEnabled: boolean;
   showCreatorContact: boolean;
+  modalCountdownSeconds: number;
   regions: ShowcaseRegionConfig[];
 };
 
@@ -29,6 +30,7 @@ const DEFAULT_CONFIG: SiteConfig = {
     "",
   redeemModeEnabled: false,
   showCreatorContact: true,
+  modalCountdownSeconds: 20,
   regions: [
     { key: "us", label: "美区 ID", tagId: 1, countryNote: "美国" },
     { key: "us_rocket", label: "美区小火箭", tagId: 6, countryNote: "美国" },
@@ -96,6 +98,18 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
       ? input.showCreatorContact
       : DEFAULT_CONFIG.showCreatorContact;
 
+  const rawModalCountdownSeconds =
+    typeof input?.modalCountdownSeconds === "number"
+      ? input.modalCountdownSeconds
+      : typeof input?.modalCountdownSeconds === "string"
+        ? Number(input.modalCountdownSeconds)
+        : DEFAULT_CONFIG.modalCountdownSeconds;
+
+  const modalCountdownSeconds =
+    Number.isFinite(rawModalCountdownSeconds) && rawModalCountdownSeconds >= 0
+      ? Math.max(0, Math.min(300, Math.floor(Number(rawModalCountdownSeconds))))
+      : DEFAULT_CONFIG.modalCountdownSeconds;
+
   const rawRegions = Array.isArray(input?.regions) ? input.regions : DEFAULT_CONFIG.regions;
   const deduped = new Map<string, ShowcaseRegionConfig>();
 
@@ -114,6 +128,7 @@ function normalizeConfig(input: Partial<SiteConfig> | null | undefined): SiteCon
     appleAutoApiKey,
     redeemModeEnabled,
     showCreatorContact,
+    modalCountdownSeconds,
     regions: regions.length > 0 ? regions : DEFAULT_CONFIG.regions,
   };
 }
@@ -124,6 +139,7 @@ type SiteConfigRow = {
   apple_auto_api_key: string | null;
   redeem_mode_enabled: boolean;
   creator_contact_enabled: boolean;
+  modal_countdown_seconds: number;
 };
 
 type SiteRegionRow = {
@@ -143,6 +159,10 @@ async function ensureSiteConfigSchema() {
         ALTER TABLE sites
         ADD COLUMN IF NOT EXISTS creator_contact_enabled BOOLEAN NOT NULL DEFAULT TRUE
       `);
+      await query(`
+        ALTER TABLE sites
+        ADD COLUMN IF NOT EXISTS modal_countdown_seconds INTEGER NOT NULL DEFAULT 20
+      `);
     })();
   }
   await ensureSchemaPromise;
@@ -156,7 +176,7 @@ async function readDatabaseConfig(): Promise<SiteConfig | null> {
 
   const [siteResult, regionsResult] = await Promise.all([
     query<SiteConfigRow>(
-      `SELECT purchase_url, apple_auto_base_url, apple_auto_api_key, redeem_mode_enabled, creator_contact_enabled
+      `SELECT purchase_url, apple_auto_base_url, apple_auto_api_key, redeem_mode_enabled, creator_contact_enabled, modal_countdown_seconds
        FROM sites
        WHERE id = $1
        LIMIT 1`,
@@ -180,6 +200,7 @@ async function readDatabaseConfig(): Promise<SiteConfig | null> {
     appleAutoApiKey: siteRow.apple_auto_api_key ?? DEFAULT_CONFIG.appleAutoApiKey,
     redeemModeEnabled: siteRow.redeem_mode_enabled,
     showCreatorContact: siteRow.creator_contact_enabled,
+    modalCountdownSeconds: siteRow.modal_countdown_seconds,
     regions: regionsResult.rows.map((row) => ({
       key: row.region_key,
       label: row.region_label,
@@ -207,6 +228,7 @@ async function writeDatabaseConfig(config: SiteConfig) {
            apple_auto_api_key = $4,
            redeem_mode_enabled = $5,
            creator_contact_enabled = $6,
+           modal_countdown_seconds = $7,
            updated_at = NOW()
        WHERE id = $1`,
       [
@@ -216,6 +238,7 @@ async function writeDatabaseConfig(config: SiteConfig) {
         normalized.appleAutoApiKey,
         normalized.redeemModeEnabled,
         normalized.showCreatorContact,
+        normalized.modalCountdownSeconds,
       ]
     );
 

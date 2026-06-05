@@ -22,7 +22,10 @@ export default async function HomePage() {
         regions={config.regions}
         redeemModeEnabled={config.redeemModeEnabled}
       >
-        <TutorialVideoModal purchaseUrl={config.purchaseUrl} />
+        <TutorialVideoModal
+          purchaseUrl={config.purchaseUrl}
+          countdownSeconds={config.modalCountdownSeconds}
+        />
         <div
           className={cn(
             "rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-200/60",

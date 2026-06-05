@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS sites (
   apple_auto_api_key TEXT,
   redeem_mode_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   creator_contact_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  modal_countdown_seconds INTEGER NOT NULL DEFAULT 20,
   timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

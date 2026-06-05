@@ -339,6 +339,35 @@ export function AdminDashboard({ initialConfig }: { initialConfig: SiteConfig })
           </div>
 
           <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
+            <h3 className="text-xl font-bold text-slate-950">弹窗倒计时设置</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              控制首页“使用必读”弹窗底部按钮解锁前的等待秒数。填 0 表示不等待，直接可关闭。
+            </p>
+            <div className="mt-4 max-w-xs">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">倒计时秒数</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={300}
+                  value={config.modalCountdownSeconds}
+                  onChange={(event) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      modalCountdownSeconds: Math.max(
+                        0,
+                        Math.min(300, Number(event.target.value) || 0)
+                      ),
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                  placeholder="20"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 px-5 py-5">
             <h3 className="text-xl font-bold text-slate-950">购买链接</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">前台所有“点我购买独享ID”都会统一使用这个地址。</p>
             <input
