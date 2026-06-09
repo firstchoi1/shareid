@@ -59,6 +59,10 @@ export function ShowcaseHome({
   const [copied, setCopied] = useState<string | null>(null);
   const [passwordSheet, setPasswordSheet] = useState<{ id: number; password: string } | null>(null);
   const [passwordQuiz, setPasswordQuiz] = useState<{ id: number; password: string } | null>(null);
+  const [passwordSuccessPrompt, setPasswordSuccessPrompt] = useState<{
+    id: number;
+    password: string;
+  } | null>(null);
   const [passwordWarningOpen, setPasswordWarningOpen] = useState(false);
   const [redeemCode, setRedeemCode] = useState("");
   const [redeemInfo, setRedeemInfo] = useState<RedeemResponse | null>(null);
@@ -483,7 +487,7 @@ export function ShowcaseHome({
                   onClick={() => {
                     const current = passwordQuiz;
                     setPasswordQuiz(null);
-                    performPasswordCopy(current.id, current.password);
+                    setPasswordSuccessPrompt({ id: current.id, password: current.password });
                   }}
                   className="flex items-center justify-center px-4 py-5 transition hover:scale-[0.98]"
                 >
@@ -497,6 +501,42 @@ export function ShowcaseHome({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {passwordSuccessPrompt ? (
+        <div
+          className="fixed inset-0 z-[193] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-success-title"
+        >
+          <div className="w-full max-w-md rounded-[26px] bg-white px-6 py-7 shadow-[0_25px_80px_rgba(15,23,42,0.35)]">
+            <h3
+              id="password-success-title"
+              className="text-center text-3xl font-extrabold tracking-wide text-red-600"
+            >
+              安全提示
+            </h3>
+            <p className="mt-6 text-center text-base leading-8 text-slate-700 sm:text-lg">
+              <span className="font-semibold text-slate-800">回答正确，</span>
+              <span className="font-semibold text-red-600">⚠️注意：</span>
+              共享账号登录
+              <span className="font-semibold text-red-600">严禁绑定手机号</span>
+              ，造成锁机，概不负责
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const current = passwordSuccessPrompt;
+                setPasswordSuccessPrompt(null);
+                performPasswordCopy(current.id, current.password);
+              }}
+              className="mt-8 w-full rounded-xl bg-[#2f92f8] px-4 py-4 text-xl font-bold text-white shadow-[0_10px_24px_rgba(47,146,248,0.3)] transition hover:bg-[#1f86ef]"
+            >
+              我已知晓，确认复制
+            </button>
           </div>
         </div>
       ) : null}
@@ -515,7 +555,7 @@ export function ShowcaseHome({
             >
               ⚠️ 警告
             </h3>
-            <p className="mt-6 text-center text-xl leading-9 text-slate-700 sm:text-[1.75rem]">
+            <p className="mt-6 text-center text-base leading-7 text-slate-700 sm:text-xl">
               回答错误！！！共享账号禁止登录设置
             </p>
             <button
