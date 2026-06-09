@@ -199,7 +199,7 @@ find_next_port() {
     if ! awk -F'|' -v port="$port" '
       $0 !~ /^[[:space:]]*#/ && NF >= 3 && $3 == port { found=1 }
       END { exit found ? 0 : 1 }
-    ' "$REGISTRY_FILE"; then
+    ' "$REGISTRY_FILE" && ! ss -lntH "( sport = :$port )" 2>/dev/null | grep -q .; then
       echo "$port"
       return
     fi
