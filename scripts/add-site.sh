@@ -193,19 +193,70 @@ if [ ! -f "$REGISTRY_FILE" ]; then
   append_summary "initialized registry file at $REGISTRY_FILE"
 fi
 
+load_used_ports() {
+  local registry_ports listener_ports
+
+  registry_ports="$(
+    awk -F'|' '
+      $0 !~ /^[[:space:]]*#/ && NF >= 3 && $3 ~ /^[0-9]+$/ { print $3 }
+    ' "$REGISTRY_FILE" 2>/dev/null | sort -n -u
+  )"
+
+  listener_ports="$(
+    {
+      ss -lntH 2>/dev/null \
+        | awk '
+          {
+            split($4, parts, ":")
+            port = parts[length(parts)]
+            if (port ~ /^[0-9]+$/) {
+              print port
+            }
+          }
+        '
+
+      lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null \
+        | awk 'NR > 1 {
+            split($9, parts, ":")
+            port = parts[length(parts)]
+            if (port ~ /^[0-9]+$/) {
+              print port
+            }
+          }'
+
+      netstat -lnt 2>/dev/null \
+        | awk 'NR > 2 {
+            split($4, parts, ":")
+            port = parts[length(parts)]
+            if (port ~ /^[0-9]+$/) {
+              print port
+            }
+          }'
+    } | sort -n -u
+  )"
+
+  printf '%s\n%s\n' "$registry_ports" "$listener_ports" \
+    | awk 'NF > 0 { seen[$1] = 1 } END { for (port in seen) print port }' \
+    | sort -n
+}
+
+port_is_used() {
+  local port="$1"
+  printf '%s\n' "$USED_PORTS" | awk -v port="$port" '$1 == port { found = 1 } END { exit found ? 0 : 1 }'
+}
+
 find_next_port() {
   local port="$MIN_PORT"
   while true; do
-    if ! awk -F'|' -v port="$port" '
-      $0 !~ /^[[:space:]]*#/ && NF >= 3 && $3 == port { found=1 }
-      END { exit found ? 0 : 1 }
-    ' "$REGISTRY_FILE" && ! ss -lntH "( sport = :$port )" 2>/dev/null | grep -q .; then
+    if ! port_is_used "$port"; then
       echo "$port"
       return
     fi
     port=$((port + 1))
   done
 }
+
+USED_PORTS="$(load_used_ports)"
 
 EXISTING_LINE="$(awk -F'|' -v app="$APP_NAME" '$0 !~ /^[[:space:]]*#/ && $1 == app { print $0 }' "$REGISTRY_FILE" || true)"
 if [ -n "$EXISTING_LINE" ]; then

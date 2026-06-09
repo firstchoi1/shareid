@@ -1,0 +1,23 @@
+services:
+  shareid-postgres-local:
+    image: postgres:16
+    container_name: shareid-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shareid
+      POSTGRES_USER: shareid_user
+      POSTGRES_PASSWORD: shareid_local_password
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - shareid_postgres_local_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shareid_user -d shareid"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  shareid_postgres_local_data:
