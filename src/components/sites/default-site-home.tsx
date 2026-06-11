@@ -6,7 +6,13 @@ import { TutorialWarningBanner } from "@/components/tutorial-warning-banner";
 import type { SiteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
-export function DefaultSiteHome({ config }: { config: SiteConfig }) {
+export function DefaultSiteHome({
+  config,
+  stackAccountsBelow = false,
+}: {
+  config: SiteConfig;
+  stackAccountsBelow?: boolean;
+}) {
   return (
     <main
       className={cn(
@@ -17,6 +23,7 @@ export function DefaultSiteHome({ config }: { config: SiteConfig }) {
         purchaseUrl={config.purchaseUrl}
         regions={config.regions}
         redeemModeEnabled={config.redeemModeEnabled}
+        stackAccountsBelow={stackAccountsBelow}
       >
         <TutorialVideoModal
           purchaseUrl={config.purchaseUrl}

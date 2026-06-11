@@ -45,11 +45,13 @@ export function ShowcaseHome({
   purchaseUrl,
   regions,
   redeemModeEnabled,
+  stackAccountsBelow = false,
 }: {
   children?: React.ReactNode;
   purchaseUrl: string;
   regions: ShowcaseRegionConfig[];
   redeemModeEnabled: boolean;
+  stackAccountsBelow?: boolean;
 }) {
   const [region, setRegion] = useState<string>(regions[0]?.key ?? "us");
   const [rows, setRows] = useState<AccountRow[]>([]);
@@ -245,7 +247,12 @@ export function ShowcaseHome({
         {purchaseCta}
       </div>
 
-      <div className="mt-4 flex min-w-0 flex-col gap-6 md:mt-5 md:grid md:grid-cols-2 md:items-start md:gap-5">
+      <div
+        className={cn(
+          "mt-4 flex min-w-0 flex-col gap-6 md:mt-5",
+          stackAccountsBelow ? "md:gap-6" : "md:grid md:grid-cols-2 md:items-start md:gap-5"
+        )}
+      >
         <div className="flex min-w-0 flex-col gap-6">
           {children}
           <div className="flex flex-col gap-3 md:hidden">
