@@ -46,12 +46,16 @@ export function ShowcaseHome({
   regions,
   redeemModeEnabled,
   stackAccountsBelow = false,
+  preAccountsContent,
+  accountTopContent,
 }: {
   children?: React.ReactNode;
   purchaseUrl: string;
   regions: ShowcaseRegionConfig[];
   redeemModeEnabled: boolean;
   stackAccountsBelow?: boolean;
+  preAccountsContent?: React.ReactNode;
+  accountTopContent?: React.ReactNode;
 }) {
   const [region, setRegion] = useState<string>(regions[0]?.key ?? "us");
   const [rows, setRows] = useState<AccountRow[]>([]);
@@ -261,8 +265,11 @@ export function ShowcaseHome({
           </div>
         </div>
 
+        {preAccountsContent ? <div className="flex min-w-0 flex-col">{preAccountsContent}</div> : null}
+
         <div className="flex min-w-0 flex-col gap-4">
           <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-200/60">
+            {accountTopContent}
             <div className="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-4 py-3.5 text-center text-white shadow-sm sm:px-6 sm:py-4">
               <h2 className="text-lg font-bold tracking-tight sm:text-xl md:text-2xl">{title}</h2>
             </div>
