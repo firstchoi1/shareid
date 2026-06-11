@@ -369,7 +369,7 @@ export function ShowcaseHome({
                         </div>
                         <div className="min-w-0 flex-1 pt-0.5">
                           <p className="text-xs font-medium text-slate-500">
-                            {account.accountLabel ?? "账号"}（下载完APP，请立即退出，避免锁机）
+                            {account.accountLabel ?? "账号"}（下载完APP，请立即退出，避免锁机，禁止绑定手机号码）
                           </p>
                           <p className="mt-0.5 break-all font-mono text-sm leading-snug text-slate-900">
                             {account.username}

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { FaqAccordionItems } from "@/components/faq/faq-content";
 import { ShowcaseHome } from "@/components/showcase/showcase-client";
 import { TutorialVideoEmbed } from "@/components/tutorial-video-embed";
+import { TutorialVideoModal } from "@/components/tutorial-video-modal";
 import { TutorialWarningBanner } from "@/components/tutorial-warning-banner";
 import type { SiteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
@@ -126,6 +127,10 @@ export function XianyuSiteHome({ config }: { config: SiteConfig }) {
           "[&_details>div]:px-3.5 [&_details>div]:py-3 [&_details>div]:sm:px-4 [&_details>div]:sm:py-4"
         )}
       >
+        <TutorialVideoModal
+          purchaseUrl={config.purchaseUrl}
+          countdownSeconds={config.modalCountdownSeconds}
+        />
         <TutorialWarningBanner purchaseUrl={config.purchaseUrl} />
         <TutorialVideoEmbed />
         <div className="p-3 sm:p-4 lg:p-5">
