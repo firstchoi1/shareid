@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function TutorialVideoModal({
   purchaseUrl,
@@ -14,33 +14,74 @@ export function TutorialVideoModal({
   const [open, setOpen] = useState(true);
   const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [canClose, setCanClose] = useState(initialCountdown <= 0);
+  const unlockAtRef = useRef<number | null>(initialCountdown > 0 ? Date.now() + initialCountdown * 1000 : null);
 
   useEffect(() => {
+    unlockAtRef.current = initialCountdown > 0 ? Date.now() + initialCountdown * 1000 : null;
+
     if (initialCountdown <= 0) {
       setSecondsLeft(0);
       setCanClose(true);
       return;
     }
 
-    let remaining = initialCountdown;
-    const timer = window.setInterval(() => {
-      remaining -= 1;
-      setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        window.clearInterval(timer);
+    const syncCountdown = () => {
+      const unlockAt = unlockAtRef.current;
+      if (!unlockAt) {
+        setSecondsLeft(0);
         setCanClose(true);
+        return true;
       }
-    }, 1000);
 
-    return () => window.clearInterval(timer);
+      const remainingMs = unlockAt - Date.now();
+      const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      setSecondsLeft(remainingSeconds);
+
+      if (remainingSeconds <= 0) {
+        setCanClose(true);
+        unlockAtRef.current = null;
+        return true;
+      }
+
+      setCanClose(false);
+      return false;
+    };
+
+    syncCountdown();
+
+    const timer = window.setInterval(() => {
+      if (syncCountdown()) {
+        window.clearInterval(timer);
+      }
+    }, 500);
+
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === "visible") {
+        syncCountdown();
+      }
+    };
+
+    window.addEventListener("focus", syncCountdown);
+    window.addEventListener("pageshow", syncCountdown);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", syncCountdown);
+      window.removeEventListener("pageshow", syncCountdown);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
   }, [initialCountdown]);
 
   const handleClose = useCallback(() => {
-    if (!canClose) {
+    const unlockAt = unlockAtRef.current;
+    if (unlockAt && Date.now() < unlockAt) {
       return;
     }
+    setCanClose(true);
+    setSecondsLeft(0);
     setOpen(false);
-  }, [canClose]);
+  }, []);
 
   if (!open) {
     return null;

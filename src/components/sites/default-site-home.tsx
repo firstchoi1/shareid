@@ -47,7 +47,7 @@ export function DefaultSiteHome({
 
       {config.showCreatorContact ? (
         <footer className="pb-3 pt-6 text-center text-sm font-medium text-slate-600 sm:pb-4 sm:text-base">
-          分页页制作联系Q：3668514531
+          分享页制作进Q群联系99号客服：1090466661
         </footer>
       ) : null}
     </main>
