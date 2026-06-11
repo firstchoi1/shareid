@@ -165,12 +165,23 @@ if [ -z "$HOST" ]; then
   exit 1
 fi
 
+HOST_PART_COUNT="$(printf '%s' "$HOST" | awk -F'.' '{print NF}')"
+
 if [[ "$HOST" == www.* ]]; then
   WWW_DOMAIN="$HOST"
   APEX_DOMAIN="${HOST#www.}"
+  PRIMARY_DOMAIN="$WWW_DOMAIN"
+  USE_WWW_REDIRECT="true"
+elif [ "$HOST_PART_COUNT" -gt 2 ]; then
+  APEX_DOMAIN="$HOST"
+  WWW_DOMAIN=""
+  PRIMARY_DOMAIN="$HOST"
+  USE_WWW_REDIRECT="false"
 else
   APEX_DOMAIN="$HOST"
   WWW_DOMAIN="www.$HOST"
+  PRIMARY_DOMAIN="$WWW_DOMAIN"
+  USE_WWW_REDIRECT="true"
 fi
 
 SITE_KEY="${APEX_DOMAIN%%.*}"
@@ -296,7 +307,7 @@ echo "site_name=$SITE_NAME"
 echo "app_name=$APP_NAME"
 echo "app_dir=$APP_DIR"
 echo "app_port=$APP_PORT"
-echo "domain=https://$WWW_DOMAIN"
+echo "domain=https://$PRIMARY_DOMAIN"
 echo "reference_app_dir=$REFERENCE_APP_DIR"
 echo "reference_site_key=$REFERENCE_SITE_KEY"
 echo "registry_file=$REGISTRY_FILE"
@@ -457,11 +468,14 @@ if [ -z "$EXISTING_LINE" ]; then
   fi
 fi
 
-if ! grep -Fq "$WWW_DOMAIN" "$CADDYFILE"; then
+CADDY_MATCH_DOMAIN="$PRIMARY_DOMAIN"
+
+if ! grep -Fq "$CADDY_MATCH_DOMAIN" "$CADDYFILE"; then
   CURRENT_STAGE="update-caddy"
   log_step "Append Caddy reverse proxy rules"
-  if [ "$DRY_RUN" = "true" ]; then
-    cat <<EOF
+  if [ "$USE_WWW_REDIRECT" = "true" ]; then
+    if [ "$DRY_RUN" = "true" ]; then
+      cat <<EOF
 [dry-run] append to $CADDYFILE:
 
 $APEX_DOMAIN {
@@ -472,8 +486,8 @@ $WWW_DOMAIN {
     reverse_proxy 127.0.0.1:$APP_PORT
 }
 EOF
-  else
-    cat >> "$CADDYFILE" <<EOF
+    else
+      cat >> "$CADDYFILE" <<EOF
 
 $APEX_DOMAIN {
     redir https://$WWW_DOMAIN{uri} 301
@@ -483,8 +497,28 @@ $WWW_DOMAIN {
     reverse_proxy 127.0.0.1:$APP_PORT
 }
 EOF
-    CADDY_APPENDED="true"
-    append_summary "appended Caddy rules for $WWW_DOMAIN"
+      CADDY_APPENDED="true"
+      append_summary "appended Caddy rules for $WWW_DOMAIN"
+    fi
+  else
+    if [ "$DRY_RUN" = "true" ]; then
+      cat <<EOF
+[dry-run] append to $CADDYFILE:
+
+$APEX_DOMAIN {
+    reverse_proxy 127.0.0.1:$APP_PORT
+}
+EOF
+    else
+      cat >> "$CADDYFILE" <<EOF
+
+$APEX_DOMAIN {
+    reverse_proxy 127.0.0.1:$APP_PORT
+}
+EOF
+      CADDY_APPENDED="true"
+      append_summary "appended Caddy rules for $APEX_DOMAIN"
+    fi
   fi
 fi
 
@@ -508,7 +542,7 @@ echo "site_key=$SITE_KEY"
 echo "app_name=$APP_NAME"
 echo "app_dir=$APP_DIR"
 echo "app_port=$APP_PORT"
-echo "domain=https://$WWW_DOMAIN"
+echo "domain=https://$PRIMARY_DOMAIN"
 if [ "$DRY_RUN" = "true" ]; then
   echo "mode=dry-run"
 fi
