@@ -102,3 +102,12 @@
     cursor: pointer;
   }
 }
+
+@keyframes tutorial-modal-countdown {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useDeadlineCountdown } from "@/hooks/use-deadline-countdown";
+
 export function TutorialVideoModal({
   purchaseUrl,
   countdownSeconds,
@@ -10,85 +12,70 @@ export function TutorialVideoModal({
   purchaseUrl: string;
   countdownSeconds: number;
 }) {
-  const initialCountdown = Math.max(0, Math.min(300, Math.floor(countdownSeconds || 0)));
   const [open, setOpen] = useState(true);
-  const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
-  const [canClose, setCanClose] = useState(initialCountdown <= 0);
-  const unlockAtRef = useRef<number | null>(initialCountdown > 0 ? Date.now() + initialCountdown * 1000 : null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cssAnimRef = useRef<HTMLDivElement>(null);
+  const cssAnimBoundRef = useRef(false);
+  const {
+    secondsLeft,
+    canClose,
+    totalSeconds,
+    elapsedSeconds,
+    canCloseNow,
+    syncNow,
+    clear,
+  } = useDeadlineCountdown(countdownSeconds);
 
   useEffect(() => {
-    unlockAtRef.current = initialCountdown > 0 ? Date.now() + initialCountdown * 1000 : null;
-
-    if (initialCountdown <= 0) {
-      setSecondsLeft(0);
-      setCanClose(true);
+    const node = dialogRef.current;
+    if (!node || totalSeconds <= 0) {
       return;
     }
 
-    const syncCountdown = () => {
-      const unlockAt = unlockAtRef.current;
-      if (!unlockAt) {
-        setSecondsLeft(0);
-        setCanClose(true);
-        return true;
-      }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          syncNow();
+        }
+      },
+      { threshold: 0 }
+    );
 
-      const remainingMs = unlockAt - Date.now();
-      const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-      setSecondsLeft(remainingSeconds);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [syncNow, totalSeconds]);
 
-      if (remainingSeconds <= 0) {
-        setCanClose(true);
-        unlockAtRef.current = null;
-        return true;
-      }
-
-      setCanClose(false);
-      return false;
-    };
-
-    syncCountdown();
-
-    const timer = window.setInterval(() => {
-      if (syncCountdown()) {
-        window.clearInterval(timer);
-      }
-    }, 500);
-
-    const handleVisibilityRefresh = () => {
-      if (document.visibilityState === "visible") {
-        syncCountdown();
-      }
-    };
-
-    window.addEventListener("focus", syncCountdown);
-    window.addEventListener("pageshow", syncCountdown);
-    document.addEventListener("visibilitychange", handleVisibilityRefresh);
-
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", syncCountdown);
-      window.removeEventListener("pageshow", syncCountdown);
-      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
-    };
-  }, [initialCountdown]);
+  useEffect(() => {
+    if (cssAnimBoundRef.current || totalSeconds <= 0 || !cssAnimRef.current) {
+      return;
+    }
+    cssAnimBoundRef.current = true;
+    const elapsed = Math.max(0, totalSeconds - secondsLeft);
+    cssAnimRef.current.style.animation = `tutorial-modal-countdown ${totalSeconds}s linear forwards`;
+    cssAnimRef.current.style.animationDelay = `-${elapsed}s`;
+  }, [secondsLeft, totalSeconds]);
 
   const handleClose = useCallback(() => {
-    const unlockAt = unlockAtRef.current;
-    if (unlockAt && Date.now() < unlockAt) {
-      return;
+    if (!canCloseNow()) {
+      syncNow();
+      if (!canCloseNow()) {
+        return;
+      }
     }
-    setCanClose(true);
-    setSecondsLeft(0);
+    clear();
     setOpen(false);
-  }, []);
+  }, [canCloseNow, clear, syncNow]);
 
   if (!open) {
     return null;
   }
 
+  const progress =
+    totalSeconds > 0 ? Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100)) : 100;
+
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-2 backdrop-blur-[2px] sm:p-4"
       role="dialog"
       aria-modal="true"
@@ -96,6 +83,15 @@ export function TutorialVideoModal({
     >
       <div className="max-h-[calc(100vh-1rem)] w-full max-w-[24rem] overflow-y-auto rounded-[26px] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.35)] sm:max-h-[calc(100vh-2rem)] sm:max-w-md sm:rounded-[32px]">
         <div className="px-4 pb-4 pt-4 text-center sm:px-8 sm:pb-6 sm:pt-7">
+          {totalSeconds > 0 && !canClose ? (
+            <div
+              ref={cssAnimRef}
+              aria-hidden
+              className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+              onAnimationEnd={syncNow}
+            />
+          ) : null}
+
           <h2
             id="usage-warning-title"
             className="text-[1.65rem] font-extrabold tracking-wide text-red-600 sm:text-[2.1rem]"
@@ -165,10 +161,23 @@ export function TutorialVideoModal({
             </div>
           </div>
 
+          {totalSeconds > 0 && !canClose ? (
+            <div
+              className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200 sm:mt-7"
+              aria-hidden
+            >
+              <div
+                className="h-full origin-left rounded-full bg-[#1677ff] transition-[width] duration-300 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+
           <button
             type="button"
             onClick={handleClose}
             disabled={!canClose}
+            aria-disabled={!canClose}
             className="mt-4 w-full rounded-full px-6 py-3.5 text-[1rem] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300 enabled:bg-[#1677ff] enabled:shadow-[0_12px_28px_rgba(22,119,255,0.3)] enabled:hover:bg-[#0f67e6] sm:mt-7 sm:py-5 sm:text-[1.3rem]"
           >
             {canClose ? "我已知晓" : `请等待（${secondsLeft}秒）`}
