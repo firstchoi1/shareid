@@ -256,8 +256,17 @@ function createCountdownStore(countdownSeconds: number): CountdownStore {
 
 export function useDeadlineCountdown(countdownSeconds: number) {
   const storeRef = useRef<CountdownStore | null>(null);
-  if (storeRef.current === null) {
-    storeRef.current = createCountdownStore(countdownSeconds);
+  const configuredSecondsRef = useRef<number | null>(null);
+  const normalizedSeconds = clampCountdown(countdownSeconds);
+
+  if (
+    storeRef.current === null ||
+    configuredSecondsRef.current === null ||
+    configuredSecondsRef.current !== normalizedSeconds
+  ) {
+    storeRef.current?.clear();
+    storeRef.current = createCountdownStore(normalizedSeconds);
+    configuredSecondsRef.current = normalizedSeconds;
   }
   const store = storeRef.current;
 

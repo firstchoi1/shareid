@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 
 import { useDeadlineCountdown } from "@/hooks/use-deadline-countdown";
 
@@ -55,16 +55,23 @@ export function TutorialVideoModal({
     cssAnimRef.current.style.animationDelay = `-${elapsed}s`;
   }, [secondsLeft, totalSeconds]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback((event?: SyntheticEvent) => {
+    event?.preventDefault();
+
+    if (totalSeconds <= 0) {
+      setOpen(false);
+      return;
+    }
+
     if (!canCloseNow()) {
       syncNow();
       if (!canCloseNow()) {
         return;
       }
     }
-    clear();
     setOpen(false);
-  }, [canCloseNow, clear, syncNow]);
+    clear();
+  }, [canCloseNow, clear, syncNow, totalSeconds]);
 
   if (!open) {
     return null;
@@ -176,9 +183,11 @@ export function TutorialVideoModal({
           <button
             type="button"
             onClick={handleClose}
+            onTouchEnd={handleClose}
+            onPointerUp={handleClose}
             disabled={!canClose}
             aria-disabled={!canClose}
-            className="mt-4 w-full rounded-full px-6 py-3.5 text-[1rem] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300 enabled:bg-[#1677ff] enabled:shadow-[0_12px_28px_rgba(22,119,255,0.3)] enabled:hover:bg-[#0f67e6] sm:mt-7 sm:py-5 sm:text-[1.3rem]"
+            className="mt-4 w-full touch-manipulation rounded-full px-6 py-3.5 text-[1rem] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300 enabled:bg-[#1677ff] enabled:shadow-[0_12px_28px_rgba(22,119,255,0.3)] enabled:hover:bg-[#0f67e6] sm:mt-7 sm:py-5 sm:text-[1.3rem]"
           >
             {canClose ? "我已知晓" : `请等待（${secondsLeft}秒）`}
           </button>
