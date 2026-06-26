@@ -3,7 +3,11 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 
-import { useDeadlineCountdown } from "@/hooks/use-deadline-countdown";
+const UNLOCK_AT_STORAGE_KEY = "shareid:tutorial-modal-unlock-at";
+
+function clampCountdown(seconds: number) {
+  return Math.max(0, Math.min(300, Math.floor(seconds || 0)));
+}
 
 export function TutorialVideoModal({
   purchaseUrl,
@@ -12,30 +16,116 @@ export function TutorialVideoModal({
   purchaseUrl: string;
   countdownSeconds: number;
 }) {
+  const normalizedCountdown = clampCountdown(countdownSeconds);
   const [open, setOpen] = useState(true);
+  const [secondsLeft, setSecondsLeft] = useState(normalizedCountdown);
+  const [canClose, setCanClose] = useState(normalizedCountdown <= 0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const cssAnimRef = useRef<HTMLDivElement>(null);
   const cssAnimBoundRef = useRef(false);
-  const {
-    secondsLeft,
-    canClose,
-    totalSeconds,
-    elapsedSeconds,
-    canCloseNow,
-    syncNow,
-    clear,
-  } = useDeadlineCountdown(countdownSeconds);
+  const unlockAtRef = useRef<number | null>(null);
+
+  const clearStoredDeadline = useCallback(() => {
+    try {
+      sessionStorage.removeItem(UNLOCK_AT_STORAGE_KEY);
+    } catch {
+      // Ignore storage failures on restricted browsers/webviews.
+    }
+  }, []);
+
+  const syncCountdown = useCallback(() => {
+    const unlockAt = unlockAtRef.current;
+    if (unlockAt === null) {
+      setSecondsLeft(0);
+      setCanClose(true);
+      return true;
+    }
+
+    const remainingMs = unlockAt - Date.now();
+    if (remainingMs <= 0) {
+      unlockAtRef.current = null;
+      clearStoredDeadline();
+      setSecondsLeft(0);
+      setCanClose(true);
+      return true;
+    }
+
+    setSecondsLeft(Math.ceil(remainingMs / 1000));
+    setCanClose(false);
+    return false;
+  }, [clearStoredDeadline]);
+
+  useEffect(() => {
+    cssAnimBoundRef.current = false;
+
+    if (normalizedCountdown <= 0) {
+      unlockAtRef.current = null;
+      clearStoredDeadline();
+      setSecondsLeft(0);
+      setCanClose(true);
+      return;
+    }
+
+    let unlockAt = Date.now() + normalizedCountdown * 1000;
+    try {
+      const raw = sessionStorage.getItem(UNLOCK_AT_STORAGE_KEY);
+      const stored = raw ? Number(raw) : Number.NaN;
+      if (Number.isFinite(stored) && stored > Date.now()) {
+        unlockAt = stored;
+      } else {
+        sessionStorage.setItem(UNLOCK_AT_STORAGE_KEY, String(unlockAt));
+      }
+    } catch {
+      // Ignore storage failures on restricted browsers/webviews.
+    }
+
+    unlockAtRef.current = unlockAt;
+    syncCountdown();
+
+    const timer = window.setInterval(() => {
+      if (syncCountdown()) {
+        window.clearInterval(timer);
+      }
+    }, 250);
+
+    const resume = () => {
+      syncCountdown();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncCountdown();
+      }
+    };
+
+    window.addEventListener("focus", resume);
+    window.addEventListener("pageshow", resume);
+    window.addEventListener("touchstart", resume, { passive: true });
+    window.addEventListener("touchend", resume, { passive: true });
+    window.addEventListener("orientationchange", resume);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", resume);
+      window.removeEventListener("pageshow", resume);
+      window.removeEventListener("touchstart", resume);
+      window.removeEventListener("touchend", resume);
+      window.removeEventListener("orientationchange", resume);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [clearStoredDeadline, normalizedCountdown, syncCountdown]);
 
   useEffect(() => {
     const node = dialogRef.current;
-    if (!node || totalSeconds <= 0) {
+    if (!node || normalizedCountdown <= 0 || typeof IntersectionObserver === "undefined") {
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          syncNow();
+          syncCountdown();
         }
       },
       { threshold: 0 }
@@ -43,42 +133,47 @@ export function TutorialVideoModal({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [syncNow, totalSeconds]);
+  }, [normalizedCountdown, syncCountdown]);
 
   useEffect(() => {
-    if (cssAnimBoundRef.current || totalSeconds <= 0 || !cssAnimRef.current) {
+    if (cssAnimBoundRef.current || normalizedCountdown <= 0 || !cssAnimRef.current) {
       return;
     }
     cssAnimBoundRef.current = true;
-    const elapsed = Math.max(0, totalSeconds - secondsLeft);
-    cssAnimRef.current.style.animation = `tutorial-modal-countdown ${totalSeconds}s linear forwards`;
+    const elapsed = Math.max(0, normalizedCountdown - secondsLeft);
+    cssAnimRef.current.style.animation = `tutorial-modal-countdown ${normalizedCountdown}s linear forwards`;
     cssAnimRef.current.style.animationDelay = `-${elapsed}s`;
-  }, [secondsLeft, totalSeconds]);
+  }, [normalizedCountdown, secondsLeft]);
 
   const handleClose = useCallback((event?: SyntheticEvent) => {
     event?.preventDefault();
 
-    if (totalSeconds <= 0) {
+    if (normalizedCountdown <= 0) {
       setOpen(false);
       return;
     }
 
-    if (!canCloseNow()) {
-      syncNow();
-      if (!canCloseNow()) {
+    if (!syncCountdown()) {
+      if (!syncCountdown()) {
         return;
       }
     }
     setOpen(false);
-    clear();
-  }, [canCloseNow, clear, syncNow, totalSeconds]);
+    unlockAtRef.current = null;
+    clearStoredDeadline();
+  }, [clearStoredDeadline, normalizedCountdown, syncCountdown]);
 
   if (!open) {
     return null;
   }
 
   const progress =
-    totalSeconds > 0 ? Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100)) : 100;
+    normalizedCountdown > 0
+      ? Math.min(
+          100,
+          Math.max(0, ((normalizedCountdown - secondsLeft) / normalizedCountdown) * 100)
+        )
+      : 100;
 
   return (
     <div
@@ -90,12 +185,12 @@ export function TutorialVideoModal({
     >
       <div className="max-h-[calc(100vh-1rem)] w-full max-w-[24rem] overflow-y-auto rounded-[26px] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.35)] sm:max-h-[calc(100vh-2rem)] sm:max-w-md sm:rounded-[32px]">
         <div className="px-4 pb-4 pt-4 text-center sm:px-8 sm:pb-6 sm:pt-7">
-          {totalSeconds > 0 && !canClose ? (
+          {normalizedCountdown > 0 && !canClose ? (
             <div
               ref={cssAnimRef}
               aria-hidden
               className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
-              onAnimationEnd={syncNow}
+              onAnimationEnd={syncCountdown}
             />
           ) : null}
 
@@ -168,7 +263,7 @@ export function TutorialVideoModal({
             </div>
           </div>
 
-          {totalSeconds > 0 && !canClose ? (
+          {normalizedCountdown > 0 && !canClose ? (
             <div
               className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200 sm:mt-7"
               aria-hidden

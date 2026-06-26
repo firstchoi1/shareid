@@ -534,11 +534,8 @@ export function ShowcaseHome({
               安全提示
             </h3>
             <p className="mt-6 text-center text-base leading-8 text-slate-700 sm:text-lg">
-              <span className="font-semibold text-slate-800">回答正确，</span>
               <span className="font-semibold text-red-600">⚠️注意：</span>
-              共享账号登录
-              <span className="font-semibold text-red-600">严禁绑定手机号</span>
-              ，造成锁机，概不负责
+              共享账号，严禁登录时输入手机号，一定会造成锁机，概不负责（其他选项-不升级）
             </p>
             <button
               type="button"
